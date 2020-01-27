@@ -10,6 +10,7 @@ import android.view.ViewConfiguration
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.cardview.widget.CardView
+import kotlin.math.abs
 
 internal class CardContainer<T> : CardView {
 
@@ -29,6 +30,11 @@ internal class CardContainer<T> : CardView {
     private var expired = false
     private var bottomLock: Boolean = false
 
+    lateinit var frameContent: FrameLayout
+    lateinit var frameOverlayTop: FrameLayout
+    lateinit var frameOverlayBottom: FrameLayout
+    lateinit var frameOverlayExpire: FrameLayout
+
 
     private val percentY: Float
         get() {
@@ -42,10 +48,6 @@ internal class CardContainer<T> : CardView {
             return percent
         }
 
-    fun setConfig(config: Config) {
-        this.config = config
-    }
-
     constructor(context: Context) : super(context) {
         init()
     }
@@ -58,11 +60,10 @@ internal class CardContainer<T> : CardView {
         init()
     }
 
+    internal fun setConfig(config: Config) {
+        this.config = config
+    }
 
-    lateinit var frameContent: FrameLayout
-    lateinit var frameOverlayTop: FrameLayout
-    lateinit var frameOverlayBottom: FrameLayout
-    lateinit var frameOverlayExpire: FrameLayout
 
     private fun init() {
         viewConfiguration = ViewConfiguration.get(context)
@@ -111,8 +112,8 @@ internal class CardContainer<T> : CardView {
             motionOriginY = ev.rawY
             intercepted = false
         } else if (ev.actionMasked == MotionEvent.ACTION_MOVE) {
-            if (Math.abs(ev.rawX - motionOriginX) < viewConfiguration!!.scaledPagingTouchSlop) {
-                if (Math.abs(ev.rawY - motionOriginY) > viewConfiguration!!.scaledTouchSlop) {
+            if (abs(ev.rawX - motionOriginX) < viewConfiguration!!.scaledPagingTouchSlop) {
+                if (abs(ev.rawY - motionOriginY) > viewConfiguration!!.scaledTouchSlop) {
                     intercepted = true
                 }
             }
@@ -339,19 +340,3 @@ internal class CardContainer<T> : CardView {
 
 }
 
-interface FirstTimeEventListener<T> {
-    fun isSwipingTopForFirstTime(item: T?): Boolean
-
-    fun isSwipingBottomForFirstTime(item: T?): Boolean
-
-    fun swipingTopPaused(item: T?, callback: FirstTimeActions)
-
-    fun swipingBottomPaused(item: T?, callback: FirstTimeActions)
-
-}
-
-interface FirstTimeActions {
-    fun proceed()
-
-    fun cancel()
-}

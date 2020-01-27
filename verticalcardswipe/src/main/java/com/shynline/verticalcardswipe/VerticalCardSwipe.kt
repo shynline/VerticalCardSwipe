@@ -16,30 +16,11 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     val config = Config()
     private val containers = LinkedList<CardContainer<T>>()
-    private var adapter: VerticalCardAdapter<T, VH>? = null
+    private lateinit var adapter: VerticalCardAdapter<T, VH>
     private var performSwipeAnimationCallbackUnLock = false
     private var oracleListener: OracleListener<T>? = null
     var firstTimeEventListener: FirstTimeEventListener<T>? = null
-//    var firstTimeSwippingTop = true
-//    var firstTimeSwippingBotton = true
-//
-//    private val firstTimeEventListener = object : OracleContainer.FirstTimeEventListener<T> {
-//        override fun isSwipingBottomForFirstTime(): Boolean {
-//            return firstTimeSwippingBotton
-//        }
-//
-//        override fun isSwipingTopForFirstTime(): Boolean {
-//            return firstTimeSwippingTop
-//        }
-//
-//        override fun swipingBottomPaused(item: T?, callback: OracleContainer.FirstTimeActions) {
-//            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//        }
-//
-//        override fun swipingTopPaused(item: T?, callback: OracleContainer.FirstTimeActions) {
-//            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-//        }
-//    }
+
 
     private val containerEventListener = object : CardContainer.ContainerEventListener<T> {
         override fun onContainerDragging(percentY: Float, expired: Boolean) {
@@ -85,64 +66,111 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         }
     }
 
+
+    /***
+     * Returns the total number of available
+     * cards in stack
+     */
     fun currentCardCount(): Int {
-        return adapter!!.count
+        return adapter.count
     }
 
+    /***
+     * Adds a collection of cards to the stack
+     * It will automatically handle empty stack
+     */
     fun addCards(items: Collection<T>) {
-        val lastCount = adapter!!.count
-        adapter!!.getItems().addAll(items)
+        val lastCount = adapter.count
+        adapter.getItems().addAll(items)
+        // If the stack already had more than visible cards
+        // nothing needs to be done
         if (lastCount >= 2) {
             return
         }
+        // In case the stack was completely empty
         if (lastCount == 0) {
-            if (items.size > 1) {
-                loadTopView()
-                loadBottomView()
-            } else if (items.isNotEmpty()) {
-                loadTopView()
-            }
-
-        } else if (lastCount == 1) {
+            // Load top view if the list is not empty
             if (items.isNotEmpty()) {
+                loadTopView()
+            }
+            // Load bottom view if more than 1 card has been added
+            if (items.size > 1) {
                 loadBottomView()
             }
-        }
+        } else
+        // If there has been already a card
+            if (lastCount == 1) {
+                // Load bottom view if new collection has atleast one card
+                if (items.isNotEmpty()) {
+                    loadBottomView()
+                }
+            }
 
     }
 
+    /***
+     * This method will remove a card with specified index
+     * It will set visible card as EXPIRED which make the card to show Expire layout
+     *
+     * returns true if it was a successful attempt
+     * and false if index is out of bound
+     * @return Boolean
+     */
     fun removeCard(index: Int): Boolean {
-        if (index >= adapter!!.count) {
+        if (index >= adapter.count) {
             return false
         }
         when (index) {
             0 -> {
-                adapter!!.onViewExpired(adapter!!.getHolder(containers.first.frameContent.getChildAt(0)), 0)
+                adapter.onViewExpired(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
                 containers.first.setExpired()
             }
             1 -> {
-                adapter!!.onViewExpired(adapter!!.getHolder(containers.last.frameContent.getChildAt(0)), 1)
+                adapter.onViewExpired(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
                 containers.last.setExpired()
             }
-            else -> adapter!!.getItems().removeAt(index)
+            else -> adapter.getItems().removeAt(index)
         }
         return true
     }
 
+    /***
+     * This method will remove a card
+     * It will set visible card as EXPIRED which make the card to show Expire layout
+     *
+     * The item needs to implement proper equals method in its class
+     *
+     * returns true if it was a successful attempt
+     * and false if index is out of bound
+     * @return Boolean
+     */
     fun removeCard(item: T): Boolean {
-        for (i in adapter!!.getItems()) {
-            if (i == item) {
-                return removeCard(adapter!!.getItems().indexOf(i))
-            }
+        adapter.getItems().find {
+            it == item
+        }?.let {
+            return removeCard(adapter.getItems().indexOf(it))
         }
         return false
     }
 
+    /***
+     * This method will update a card
+     * update process is handled by user with Updater class
+     *
+     * returns true if the card has already been existed and false if it wasn't
+     * it doesn't matter if it has been created or not
+     *
+     * @param addIfNotExist determines if the card needs to be added if it doesn't exist
+     * @param newItem target card
+     * @param updater this method will be called if there is already a card which needs to be updated
+     * @return Boolean
+     */
     fun updateCard(newItem: T, updater: Updater<T>, addIfNotExist: Boolean): Boolean {
         var index = -1
-        val size = adapter!!.count
+        val size = adapter.count
+
         for (i in 0 until size) {
-            if (adapter!!.getItems()[i] == newItem) {
+            if (adapter.getItems()[i] == newItem) {
                 index = i
                 break
             }
@@ -154,14 +182,14 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
             return false
         }
 
-        updater.update(adapter!!.getItem(index), newItem)
+        updater.update(adapter.getItem(index), newItem)
 
         if (index == 0) { // update top card
-            adapter!!.onUpdateViewHolder(adapter!!.getHolder(containers.first.frameContent.getChildAt(0)), 0)
-            containers.first.item = adapter!!.getItem(index)
+            adapter.onUpdateViewHolder(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
+            containers.first.item = adapter.getItem(index)
         } else if (index == 1) { // update bottom card
-            adapter!!.onUpdateViewHolder(adapter!!.getHolder(containers.last.frameContent.getChildAt(0)), 1)
-            containers.last.item = adapter!!.getItem(index)
+            adapter.onUpdateViewHolder(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
+            containers.last.item = adapter.getItem(index)
         }
 
         return true
