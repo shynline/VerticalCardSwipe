@@ -15,7 +15,7 @@ import java.util.*
 class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     val config = Config()
-    private val containers = LinkedList<OracleContainer<T>>()
+    private val containers = LinkedList<CardContainer<T>>()
     private var adapter: VerticalCardAdapter<T, VH>? = null
     private var performSwipeAnimationCallbackUnLock = false
     private var oracleListener: OracleListener<T>? = null
@@ -41,7 +41,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 //        }
 //    }
 
-    private val containerEventListener = object : OracleContainer.ContainerEventListener<T> {
+    private val containerEventListener = object : CardContainer.ContainerEventListener<T> {
         override fun onContainerDragging(percentY: Float, expired: Boolean) {
             update(percentY)
             if (oracleListener != null) {
@@ -206,8 +206,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         init()
     }
 
-    private fun createContainer(): OracleContainer<T> {
-        val oracleContainer = OracleContainer<T>(context)
+    private fun createContainer(): CardContainer<T> {
+        val oracleContainer = CardContainer<T>(context)
         val layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
 
@@ -286,7 +286,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     private fun update(percentY: Float) {
 
 
-        var view: OracleContainer<*> = containers.last
+        var view: CardContainer<*> = containers.last
 
         var currentScale = 1f - config.scaleDiff
         var nextScale = 1f
@@ -379,7 +379,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     }
 
-    private fun moveToBottom(container: OracleContainer<*>) {
+    private fun moveToBottom(container: CardContainer<*>) {
         val parent = container.parent as VerticalCardSwipe<*, *>
         parent.removeView(container)
         parent.addView(container, 0)

@@ -11,7 +11,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.cardview.widget.CardView
 
-class OracleContainer<T> : CardView {
+internal class CardContainer<T> : CardView {
 
     private var containerEventListener: ContainerEventListener<T>? = null
     var firstTimeEventListener: FirstTimeEventListener<T>? = null
