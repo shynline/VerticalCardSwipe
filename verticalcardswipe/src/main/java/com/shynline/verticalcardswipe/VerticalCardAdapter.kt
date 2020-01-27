@@ -1,0 +1,62 @@
+package com.shynline.verticalcardswipe
+
+import android.view.View
+import android.view.ViewGroup
+
+@Suppress("UNCHECKED_CAST")
+abstract class VerticalCardAdapter<T, VH : BaseViewHolder> {
+
+    private val items: MutableList<T> = arrayListOf()
+
+    val count: Int
+        get() = items.size
+
+    fun getItem(position: Int): T {
+        return items[position]
+    }
+
+    internal fun getItems(): MutableList<T> {
+        return items
+    }
+
+    open fun onViewExpired(holder: VH, position: Int) {
+        holder.expired = true
+    }
+
+    fun removeFirstItem(): Boolean {
+        return if (count > 0) {
+            items.removeAt(0)
+            true
+        } else {
+            false
+        }
+    }
+
+    abstract fun createItemView(parent: ViewGroup): View
+
+    abstract fun createViewHolder(itemView: View): VH
+
+    abstract fun onUpdateViewHolder(holder: VH, position: Int)
+
+    abstract fun onBindViewHolder(holder: VH, position: Int)
+
+    internal fun getView(position: Int, convert_view: View?, parent: ViewGroup): View {
+        var convertView = convert_view
+        val holder: VH
+        if (convertView == null) {
+            convertView = createItemView(parent)
+            holder = createViewHolder(convertView)
+            convertView.tag = holder
+        } else {
+            holder = convertView.tag as VH
+        }
+        onBindViewHolder(holder, position)
+        return convertView
+    }
+
+    internal fun getHolder(convertView: View): VH {
+        return convertView.tag as VH
+    }
+
+}
+
