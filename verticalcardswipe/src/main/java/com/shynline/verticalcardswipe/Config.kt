@@ -1,5 +1,10 @@
 package com.shynline.verticalcardswipe
 
+
+/***
+ * This default config of the VerticalCardSwipe View
+ * it can be instantiated and modified
+ */
 class Config {
     var bottomDragLimit = 0.25f
     var bottomDragCallThreshold = 0.125f

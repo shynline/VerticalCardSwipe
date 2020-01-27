@@ -6,6 +6,7 @@ package com.shynline.verticalcardswipe
  *
  */
 interface FirstTimeActions {
+
     /***
      * Call this if you need to proceed swiping
      */
