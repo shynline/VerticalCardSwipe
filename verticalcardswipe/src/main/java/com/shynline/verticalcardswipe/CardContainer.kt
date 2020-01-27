@@ -76,14 +76,14 @@ internal class CardContainer<T> : CardView {
         frameOverlayExpire = v.findViewById(R.id.frame_overlay_expire)
     }
 
-    fun setAsAds() {
+    internal fun setAsAds() {
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
         frameOverlayExpire.alpha = 0f
         bottomLock = true
     }
 
-    fun setExpired() {
+    internal fun setExpired() {
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
         this.expired = true
@@ -97,7 +97,7 @@ internal class CardContainer<T> : CardView {
                 .start()
     }
 
-    fun reset() {
+    internal fun reset() {
         bottomLock = false
         expired = false
         frameOverlayBottom.alpha = 0f
@@ -130,7 +130,7 @@ internal class CardContainer<T> : CardView {
         return true
     }
 
-    fun getTopSwipeTargetPoint(): Point {
+    internal fun getTopSwipeTargetPoint(): Point {
         if (topSwipeTargetPoint == null) {
             return Point(x.toInt(),
                     viewOriginY.toInt() - height)
@@ -147,7 +147,7 @@ internal class CardContainer<T> : CardView {
         return true
     }
 
-    fun setDraggable(draggable: Boolean) {
+    internal fun setDraggable(draggable: Boolean) {
         isDraggable = draggable
     }
 
@@ -230,15 +230,27 @@ internal class CardContainer<T> : CardView {
                 .setInterpolator(OvershootInterpolator(1.0f))
                 .setUpdateListener(null)
                 .setListener(object : Animator.AnimatorListener {
+                    /***
+                     *
+                     */
                     override fun onAnimationRepeat(animation: Animator?) {
                     }
 
+                    /***
+                     *
+                     */
                     override fun onAnimationCancel(animation: Animator?) {
                     }
 
+                    /***
+                     *
+                     */
                     override fun onAnimationStart(animation: Animator?) {
                     }
 
+                    /***
+                     *
+                     */
                     override fun onAnimationEnd(animation: Animator?) {
                         if (containerEventListener != null) {
                             containerEventListener!!.onContainerReleasedFromBottom(item, expired)
@@ -323,7 +335,7 @@ internal class CardContainer<T> : CardView {
     }
 
 
-    fun setViewOriginY() {
+    internal fun setViewOriginY() {
         viewOriginY = translationY
     }
 
