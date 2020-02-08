@@ -2,47 +2,94 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/first"
-        android:title="add one"
+        android:id="@+id/add_single_card"
+        android:title="Add a single Card "
         app:showAsAction="never" />
     <item
-        android:id="@+id/second"
-        android:title="add many"
+        android:id="@+id/add_multiple_cards"
+        android:title="Add ten Cards"
         app:showAsAction="never" />
     <item
-        android:id="@+id/third"
-        android:title="remove first"
+        android:id="@+id/add_single_ad_card"
+        android:title="Add a single ad Card"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/remove_first_card"
+        android:title="Remove first Card"
         app:showAsAction="never" />
     <item
-        android:id="@+id/forth"
-        android:title="remove second"
+        android:id="@+id/remove_second_card"
+        android:title="Remove second Card"
         app:showAsAction="never" />
     <item
-        android:id="@+id/fifth"
-        android:title="remove random"
+        android:id="@+id/remove_a_random_Card"
+        android:title="Remove a random Card"
         app:showAsAction="never" />
     <item
-        android:id="@+id/sixth"
-        android:title="update first"
+        android:id="@+id/remove_all_cards"
+        android:title="Remove all Cards"
         app:showAsAction="never" />
     <item
-        android:id="@+id/seventh"
-        android:title="update second"
+        android:id="@+id/update_first_card"
+        android:title="Update first Card"
         app:showAsAction="never" />
     <item
-        android:id="@+id/eighth"
-        android:title="update random"
+        android:id="@+id/update_second_card"
+        android:title="Update second Card"
         app:showAsAction="never" />
     <item
-        android:id="@+id/remove"
-        android:title="remove all"
+        android:id="@+id/update_a_random_card"
+        android:title="Update a random Card"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/swipe_top"
+        android:title="Swipe top"
         app:showAsAction="never" />
     <item
-        android:id="@+id/dismiss"
-        android:title="dismiss"
+        android:id="@+id/swipe_top_silent"
+        android:title="Swipe top silently"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/swipe_bottom"
+        android:title="Swipe bottom"
         app:showAsAction="never" />
     <item
-        android:id="@+id/dismiss_silent"
-        android:title="dismiss_silent"
+        android:id="@+id/swipe_bottom_silent"
+        android:title="Swipe bottom silently"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/toggle_first_time_flag"
+        android:title="Toggle first time flag"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/toggle_top_action"
+        android:title="Toggle top action"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/toggle_bottom_action"
+        android:title="Toggle bottom action"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/toggle_ad_prevent_top"
+        android:title="Toggle prevent swipe top ad"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/toggle_ad_prevent_bottom"
+        android:title="Toggle prevent swipe bottom ad"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/toggle_expired_prevent_top"
+        android:title="Toggle prevent swipe top expired"
+        app:showAsAction="never" />
+    <item
+        android:id="@+id/toggle_expired_prevent_bottom"
+        android:title="Toggle prevent swipe bottom expired"
         app:showAsAction="never" />
 </menu>

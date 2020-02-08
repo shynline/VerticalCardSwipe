@@ -17,10 +17,12 @@ internal class CardContainer<T> : CardView {
     private var containerEventListener: ContainerEventListener<T>? = null
     var firstTimeEventListener: FirstTimeEventListener<T>? = null
     private var viewConfiguration: ViewConfiguration? = null
-    private var config: Config? = null
+    private lateinit var config: Config
+    var itemConfig = ItemConfig()
     var item: T? = null
 
     private var topSwipeTargetPoint: Point? = null
+    private var bottomSwipeTargetPoint: Point? = null
     private var viewOriginY = 0f
     private var motionOriginX: Float = 0.toFloat()
     private var motionOriginY: Float = 0.toFloat()
@@ -29,6 +31,7 @@ internal class CardContainer<T> : CardView {
     private var isDraggable = false
     private var expired = false
     private var bottomLock: Boolean = false
+    private var topLock: Boolean = false
 
     lateinit var frameContent: FrameLayout
     lateinit var frameOverlayTop: FrameLayout
@@ -80,14 +83,21 @@ internal class CardContainer<T> : CardView {
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
         frameOverlayExpire.alpha = 0f
-        bottomLock = true
+        bottomLock = config.preventSwipeBottomIfAd
+        topLock = config.preventSwipeTopIfAd
+
+    }
+
+    fun isExpired(): Boolean {
+        return expired
     }
 
     internal fun setExpired() {
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
         this.expired = true
-        bottomLock = true
+        bottomLock = config.preventSwipeBottomIfExpired
+        topLock = config.preventSwipeTopIfExpired
         moveToOrigin()
         frameOverlayExpire.animate().alpha(1f)
                 .setDuration(300L)
@@ -98,7 +108,9 @@ internal class CardContainer<T> : CardView {
     }
 
     internal fun reset() {
+        itemConfig = ItemConfig()
         bottomLock = false
+        topLock = false
         expired = false
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
@@ -139,6 +151,15 @@ internal class CardContainer<T> : CardView {
         return topSwipeTargetPoint!!
     }
 
+    internal fun getBottomSwipeTargetPoint(): Point {
+        if (bottomSwipeTargetPoint == null) {
+            return Point(x.toInt(),
+                    viewOriginY.toInt() + height)
+            // I don't want to initiate here
+        }
+        return bottomSwipeTargetPoint!!
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_UP -> handleActionUp(event)
@@ -154,14 +175,14 @@ internal class CardContainer<T> : CardView {
     private fun handleActionUp(event: MotionEvent) {
         if (isDragging) {
             isDragging = false
-
-
             val motionCurrentY = event.rawY
-
-
             if (topSwipeTargetPoint == null) {
                 topSwipeTargetPoint = Point(x.toInt(),
                         viewOriginY.toInt() - height)
+            }
+            if (bottomSwipeTargetPoint == null) {
+                bottomSwipeTargetPoint = Point(x.toInt(),
+                        viewOriginY.toInt() + height)
             }
 
             val swipeDirection = if (motionCurrentY - motionOriginY > 0)
@@ -171,50 +192,105 @@ internal class CardContainer<T> : CardView {
 
             val percent = percentY
             if (swipeDirection == SwipeDirection.Top) {
-                if (Math.abs(percent) > config!!.swipeThreshold) {
-                    if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
-                        firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
-                            override fun proceed() {
-                                frameOverlayTop.alpha = 1f
-                                containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
-                            }
+                if (itemConfig.actionTop) {
+                    if (translationY < config.bottomDragCallThreshold * height) {
+                        if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
+                            firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
+                                override fun proceed() {
+                                    moveToOriginOnAction {
+                                        containerEventListener?.onContainerReleasedFromTop(item, expired)
+                                    }
+                                }
 
-                            override fun cancel() {
-                                moveToOrigin()
-                                containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                                override fun cancel() {
+                                    moveToOrigin()
+                                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                                }
+                            })
+                        } else {
+                            moveToOriginOnAction {
+                                containerEventListener?.onContainerReleasedFromTop(item, expired)
                             }
-                        })
+                        }
                     } else {
-                        frameOverlayTop.alpha = 1f
-                        containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
-                    }
+                        moveToOrigin()
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
 
+                    }
                 } else {
-                    moveToOrigin()
-                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                    if (abs(percent) > config.swipeThreshold) {
+                        if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
+                            firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
+                                override fun proceed() {
+                                    frameOverlayTop.alpha = 1f
+                                    containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
+                                }
+
+                                override fun cancel() {
+                                    moveToOrigin()
+                                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                                }
+                            })
+                        } else {
+                            frameOverlayTop.alpha = 1f
+                            containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
+                        }
+
+                    } else {
+                        moveToOrigin()
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                    }
                 }
-            } else {
-                if (translationY > config!!.bottomDragCallThreshold * height) {
-                    if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
-                        firstTimeEventListener?.swipingBottomPaused(item, object : FirstTimeActions {
-                            override fun proceed() {
-                                moveToOriginOnAction()
+            } else {  //swipeDirection != SwipeDirection.Top
+                if (itemConfig.actionBottom) {
+                    if (translationY > config.bottomDragCallThreshold * height) {
+                        if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
+                            firstTimeEventListener?.swipingBottomPaused(item, object : FirstTimeActions {
+                                override fun proceed() {
+                                    moveToOriginOnAction {
+                                        containerEventListener?.onContainerReleasedFromBottom(item, expired)
+                                    }
+                                }
 
+                                override fun cancel() {
+                                    moveToOrigin()
+                                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                                }
+                            })
+                        } else {
+                            moveToOriginOnAction {
+                                containerEventListener?.onContainerReleasedFromBottom(item, expired)
                             }
 
-                            override fun cancel() {
-                                moveToOrigin()
-                                containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
-                            }
-                        })
+                        }
                     } else {
-                        moveToOriginOnAction()
+                        moveToOrigin()
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
 
                     }
                 } else {
-                    moveToOrigin()
-                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                    if (abs(percent) > config.swipeThreshold) {
+                        if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
+                            firstTimeEventListener?.swipingBottomPaused(item, object : FirstTimeActions {
+                                override fun proceed() {
+                                    frameOverlayTop.alpha = 1f
+                                    containerEventListener?.onContainerSwipedBottom(item, bottomSwipeTargetPoint!!, expired)
+                                }
 
+                                override fun cancel() {
+                                    moveToOrigin()
+                                    containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                                }
+                            })
+                        } else {
+                            frameOverlayTop.alpha = 1f
+                            containerEventListener?.onContainerSwipedBottom(item, bottomSwipeTargetPoint!!, expired)
+                        }
+
+                    } else {
+                        moveToOrigin()
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                    }
                 }
 
             }
@@ -223,7 +299,8 @@ internal class CardContainer<T> : CardView {
         }
     }
 
-    private fun moveToOriginOnAction() {
+
+    private fun moveToOriginOnAction(callback: () -> Unit) {
         animate().scaleX(1f).scaleY(1f)
                 .translationY(viewOriginY)
                 .setDuration(300L)
@@ -252,9 +329,7 @@ internal class CardContainer<T> : CardView {
                      *
                      */
                     override fun onAnimationEnd(animation: Animator?) {
-                        if (containerEventListener != null) {
-                            containerEventListener!!.onContainerReleasedFromBottom(item, expired)
-                        }
+                        callback()
                     }
                 })
                 .start()
@@ -304,9 +379,8 @@ internal class CardContainer<T> : CardView {
         isDragging = true
         updateTranslation(event)
         val py = percentY
-        if (containerEventListener != null) {
-            containerEventListener!!.onContainerDragging(py, expired)
-        }
+        containerEventListener?.onContainerDragging(py, expired)
+
         if (expired)
             return
         if (py >= 0) {
@@ -323,9 +397,18 @@ internal class CardContainer<T> : CardView {
         val diff = event.rawY - motionOriginY
         if (diff > 0 && bottomLock)
             return
+        if (diff < 0 && topLock)
+            return
         var value = viewOriginY + diff
-        if (value > height * config!!.bottomDragLimit) {
-            value = height * config!!.bottomDragLimit
+        if (itemConfig.actionBottom) {
+            if (value > height * config.bottomDragLimit) {
+                value = height * config.bottomDragLimit
+            }
+        }
+        if (itemConfig.actionTop) {
+            if (value < -height * config.topDragLimit) {
+                value = -height * config.topDragLimit
+            }
         }
         translationY = value
     }
@@ -344,9 +427,12 @@ internal class CardContainer<T> : CardView {
 
         fun onContainerSwipedTop(item: T?, point: Point, expired: Boolean)
 
+        fun onContainerSwipedBottom(item: T?, point: Point, expired: Boolean)
+
         fun onContainerMovedToOrigin(fromDirection: SwipeDirection, expired: Boolean)
 
         fun onContainerReleasedFromBottom(item: T?, expired: Boolean)
+        fun onContainerReleasedFromTop(item: T?, expired: Boolean)
 
     }
 

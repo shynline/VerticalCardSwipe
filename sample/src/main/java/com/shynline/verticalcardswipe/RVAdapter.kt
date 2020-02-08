@@ -1,11 +1,12 @@
 package com.shynline.verticalcardswipe
 
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
+import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.request.RequestOptions
 import java.util.*
 
 class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapter<RVAdapter.ViewHolder>() {
@@ -17,10 +18,12 @@ class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapte
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val rnd = Random()
-        val color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256))
-        holder.root.setBackgroundColor(color)
-        holder.textView.text = position.toString() + "\n" + text
+//        val rnd = Random()
+//        val color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256))
+//        holder.root.setBackgroundColor(color)
+        Glide.with(holder.image).load("https://picsum.photos/300/600?temp=${UUID.randomUUID()}")
+                .apply(RequestOptions().centerCrop())
+                .into(holder.image)
     }
 
     override fun getItemCount(): Int {
@@ -31,11 +34,11 @@ class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapte
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         var root: ViewGroup
-        var textView: TextView
+        var image: ImageView
 
         init {
             root = itemView.findViewById(R.id.root)
-            textView = itemView.findViewById(R.id.text)
+            image = itemView.findViewById(R.id.image)
         }
     }
 }

@@ -2,7 +2,6 @@ package com.shynline.verticalcardswipe
 
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,6 +11,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentStatePagerAdapter
 import java.util.*
 
+@Deprecated("")
 class ViewPagerAdaper(fm: FragmentManager) : FragmentStatePagerAdapter(fm) {
 
 
@@ -35,7 +35,6 @@ class ViewPagerAdaper(fm: FragmentManager) : FragmentStatePagerAdapter(fm) {
             val textView = vv.findViewById<TextView>(R.id.text)
             textView.text = Date().toString()
             vv.findViewById<View>(R.id.root).setBackgroundColor(color)
-            Log.d("touchsystem", color.toString())
             return vv
         }
 

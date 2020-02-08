@@ -12,7 +12,7 @@
         android:layout_marginTop="32dp"
         android:layout_marginBottom="32dp"
         android:gravity="center"
-        android:text="expire"
+        android:text="Expired Overlay"
         android:textColor="@android:color/black"
         android:textSize="42sp"
         app:layout_constraintBottom_toBottomOf="parent"

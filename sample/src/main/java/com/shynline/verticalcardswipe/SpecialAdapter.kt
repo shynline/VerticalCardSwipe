@@ -6,11 +6,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import androidx.recyclerview.widget.RecyclerView
-import java.util.*
 
 class SpecialAdapter(private val context: Context) : VerticalCardAdapter<ItemModelView, ViewHolder>() {
 
@@ -23,29 +21,28 @@ class SpecialAdapter(private val context: Context) : VerticalCardAdapter<ItemMod
     }
 
     override fun onUpdateViewHolder(holder: ViewHolder, position: Int) {
-        holder.adapter!!.text = holder.adapter!!.text + "\n" + "updated : " + Date().toString()
-        holder.adapter!!.notifyDataSetChanged()
+        val item = getItem(position)
+        holder.adapter?.text = item.text
+        holder.adapter?.notifyDataSetChanged()
     }
 
     override fun onViewExpired(holder: ViewHolder, position: Int) {
         super.onViewExpired(holder, position)
-        holder.adapter!!.text = "expired"
-        holder.adapter!!.notifyDataSetChanged()
+        holder.adapter?.notifyDataSetChanged()
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val item = getItem(position)
         if (!item.isCurrentItemAd()) {
             holder.recyclerView.visibility = View.VISIBLE
-//            holder.ad.visibility = View.GONE
-            holder.adapter = RVAdapter(50, item.text)
+            holder.adapter = RVAdapter(5, item.text)
             holder.recyclerView.adapter = holder.adapter
-            holder.ad.visibility = View.VISIBLE
-            holder.ad.text = "${item.id}"
+            holder.ad.visibility = View.GONE
+            holder.text.text = "${item.text}"
         } else {
             holder.recyclerView.visibility = View.GONE
             holder.ad.visibility = View.VISIBLE
-            holder.ad.text = "this is a fancy ad"
+            holder.ad.text = "This is a fancy ad"
         }
 
 
@@ -58,7 +55,8 @@ class ViewHolder(itemView: View, context: Context) : BaseViewHolder(itemView) {
     var llm: LinearLayoutManager = LinearLayoutManager(
             context, LinearLayoutManager.HORIZONTAL, false
     )
-    var ad = itemView.findViewById<TextView>(R.id.text2)
+    var ad = itemView.findViewById<TextView>(R.id.ad)
+    var text = itemView.findViewById<TextView>(R.id.text)
     var adapter: RVAdapter? = null
 
     init {
@@ -68,12 +66,10 @@ class ViewHolder(itemView: View, context: Context) : BaseViewHolder(itemView) {
         llm.scrollToPosition(1) // best for initiation
         // problem when it merge with natural user flings
         val snapHelper =
-
                 object : PagerSnapHelper() {
                     override fun findTargetSnapPosition(layoutManager: RecyclerView.LayoutManager, velocityX: Int, velocityY: Int): Int {
                         val i = super.findTargetSnapPosition(layoutManager, velocityX, velocityY)
                         // not reliable - wont call in smooth user manual page without fling
-                        Toast.makeText(context, "" + i, Toast.LENGTH_SHORT).show()
                         return i
 
                     }

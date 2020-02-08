@@ -14,11 +14,11 @@ abstract class VerticalCardAdapter<T, VH : BaseViewHolder> {
     internal val count: Int
         get() = items.size
 
-    internal fun getItem(position: Int): T {
+    fun getItem(position: Int): T {
         return items[position]
     }
 
-    internal fun getItems(): MutableList<T> {
+    fun getItems(): MutableList<T> {
         return items
     }
 

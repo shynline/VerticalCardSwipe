@@ -18,38 +18,44 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     private val containers = LinkedList<CardContainer<T>>()
     private lateinit var adapter: VerticalCardAdapter<T, VH>
     private var performSwipeAnimationCallbackUnLock = false
-    private var oracleListener: OracleListener<T>? = null
+    var verticalCardsStateListener: VerticalCardsStateListener<T>? = null
+    var verticalCardsActionListener: VerticalCardsActionListener<T>? = null
+    var verticalCardsSwipeListener: VerticalCardsSwipeListener<T>? = null
 
     private var topLayout: Int? = null
     private var bottomLayout: Int? = null
     private var expireLayout: Int? = null
-    private lateinit var topLayoutInitializer: (View) -> Unit
-    private lateinit var bottomLayoutInitializer: (View) -> Unit
-    private lateinit var expireLayoutInitializer: (View) -> Unit
+
+    private var topLayoutInitializer: ((View) -> Unit)? = null
+    private var bottomLayoutInitializer: ((View) -> Unit)? = null
+    private var expireLayoutInitializer: ((View) -> Unit)? = null
+
+    private val itemConfig = ItemConfig()
 
     private val containerEventListener = object : CardContainer.ContainerEventListener<T> {
         override fun onContainerDragging(percentY: Float, expired: Boolean) {
             update(percentY)
-            if (oracleListener != null) {
-                oracleListener!!.onDragging(percentY)
-            }
+            verticalCardsStateListener?.onDragging(percentY)
         }
 
         override fun onContainerMovedToOrigin(fromDirection: SwipeDirection, expired: Boolean) {
-            if (oracleListener != null) {
-                oracleListener!!.onMovedToOrigin(fromDirection)
-            }
+            verticalCardsStateListener?.onMovedToOrigin(fromDirection)
         }
 
         override fun onContainerReleasedFromBottom(item: T?, expired: Boolean) {
-            if (oracleListener != null) {
-                oracleListener!!.onReleasedToAction(item)
-            }
+            verticalCardsActionListener?.onReleasedToActionBottom(item, expired)
         }
 
+        override fun onContainerReleasedFromTop(item: T?, expired: Boolean) {
+            verticalCardsActionListener?.onReleasedToActionTop(item, expired)
+        }
 
         override fun onContainerSwipedTop(item: T?, point: Point, expired: Boolean) {
-            swipe(point, item)
+            swipeTop(point, item, silent = false, artificial = false, expired = expired)
+        }
+
+        override fun onContainerSwipedBottom(item: T?, point: Point, expired: Boolean) {
+            swipeBottom(point, item, silent = false, artificial = false, expired = expired)
         }
     }
 
@@ -236,13 +242,13 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      * expire layout is shown when a card mark as EXPIRED
      * the corresponding callback will be called after inflating the View
      */
-    fun initializeTheOrb(adapter: VerticalCardAdapter<T, VH>
-                         , top_layout: Int? = null
-                         , topLayoutInitializer: ((View) -> Unit)? = null
-                         , bottom_layout: Int? = null
-                         , bottomLayoutInitializer: ((View) -> Unit)? = null
-                         , expireLayout: Int? = null
-                         , expireLayoutInitializer: ((View) -> Unit)? = null) {
+    fun initialize(adapter: VerticalCardAdapter<T, VH>
+                   , top_layout: Int? = null
+                   , topLayoutInitializer: ((View) -> Unit)? = null
+                   , bottom_layout: Int? = null
+                   , bottomLayoutInitializer: ((View) -> Unit)? = null
+                   , expireLayout: Int? = null
+                   , expireLayoutInitializer: ((View) -> Unit)? = null): VerticalCardSwipe<T, VH> {
         if (initialized) {
             throw RuntimeException("You can't call initializeTheOrb more than once")
         }
@@ -251,58 +257,44 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         this.topLayout = top_layout
         this.bottomLayout = bottom_layout
         this.expireLayout = expireLayout
-        if (topLayout != null) {
-            if (topLayoutInitializer == null) {
-                throw RuntimeException("overlay layout need initializer.")
-            }
-            this.topLayoutInitializer = topLayoutInitializer
-        }
-        if (bottomLayout != null) {
-            if (bottomLayoutInitializer == null) {
-                throw RuntimeException("overlay layout need initializer.")
-            }
-            this.bottomLayoutInitializer = bottomLayoutInitializer
-        }
-        if (expireLayout != null) {
-            if (expireLayoutInitializer == null) {
-                throw RuntimeException("overlay layout need initializer.")
-            }
-            this.expireLayoutInitializer = expireLayoutInitializer
-        }
+        this.topLayoutInitializer = topLayoutInitializer
+        this.bottomLayoutInitializer = bottomLayoutInitializer
+        this.expireLayoutInitializer = expireLayoutInitializer
+
         init()
+        return this
     }
 
     private fun createContainer(): CardContainer<T> {
-        val oracleContainer = CardContainer<T>(context)
+        val vcsContainer = CardContainer<T>(context)
         val layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
 
         layoutParams.setMargins(Utils.toPx(context, config.cardLeftMarginDP).toInt(), Utils.toPx(context, config.cardTopMarginDP).toInt(), Utils.toPx(context, config.cardRightMarginDP).toInt(), Utils.toPx(context, config.cardBottomMarginDP).toInt())
-        oracleContainer.layoutParams = layoutParams
-        oracleContainer.radius = Utils.toPx(context, config.cardRadiusDP)
+        vcsContainer.layoutParams = layoutParams
+        vcsContainer.radius = Utils.toPx(context, config.cardRadiusDP)
         if (topLayout != null) {
             val tv = LayoutInflater.from(context)
-                    .inflate(topLayout!!, oracleContainer.frameOverlayTop, false)
-            topLayoutInitializer(tv)
-            oracleContainer.frameOverlayTop.addView(tv)
+                    .inflate(topLayout!!, vcsContainer.frameOverlayTop, false)
+            topLayoutInitializer?.invoke(tv)
+            vcsContainer.frameOverlayTop.addView(tv)
         }
         if (bottomLayout != null) {
             val bv = LayoutInflater.from(context)
-                    .inflate(bottomLayout!!, oracleContainer.frameOverlayBottom, false)
-            bottomLayoutInitializer(bv)
-            oracleContainer.frameOverlayBottom.addView(bv)
+                    .inflate(bottomLayout!!, vcsContainer.frameOverlayBottom, false)
+            bottomLayoutInitializer?.invoke(bv)
+            vcsContainer.frameOverlayBottom.addView(bv)
         }
         if (expireLayout != null) {
             val ev = LayoutInflater.from(context)
-                    .inflate(expireLayout!!, oracleContainer.frameOverlayExpire, false)
-            expireLayoutInitializer(ev)
-            oracleContainer.frameOverlayExpire.addView(ev)
+                    .inflate(expireLayout!!, vcsContainer.frameOverlayExpire, false)
+            expireLayoutInitializer?.invoke(ev)
+            vcsContainer.frameOverlayExpire.addView(ev)
         }
-        return oracleContainer
+        return vcsContainer
     }
 
     private fun init() {
-
         removeAllViews()
         containers.clear()
         // create top view
@@ -310,6 +302,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         // create bottom view
         containers.add(createContainer())
 
+        // Add cards to layout
         addView(containers.last)
         addView(containers.first)
 
@@ -340,7 +333,15 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         view.scaleX = percent
         view.scaleY = percent
 
-        if (percentY <= 0) {
+        if (percentY <= 0 && !containers.first.itemConfig.actionTop) {
+            view = containers.first
+            currentScale = 1f
+            nextScale = 1f - config.scaleDiff * 2
+            percent = currentScale + (nextScale - currentScale) * Math.abs(percentY)
+            view.scaleX = percent
+            view.scaleY = percent
+        }
+        if (percentY >= 0 && !containers.first.itemConfig.actionBottom) {
             view = containers.first
             currentScale = 1f
             nextScale = 1f - config.scaleDiff * 2
@@ -352,13 +353,26 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     }
 
-    private fun swipe(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false) {
+    private fun swipeBottom(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false, expired: Boolean) {
         executePreSwipeTask()
-        performSwipe(point, artificial, object : AnimatorListenerAdapter() {
+        performSwipeBottom(point, artificial, object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animator: Animator) {
                 executePostSwipeTask(point)
                 if (!silent) {
-                    oracleListener?.onSwipedTop(item)
+                    verticalCardsSwipeListener?.onSwipedBottom(item, expired)
+                }
+
+            }
+        })
+    }
+
+    private fun swipeTop(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false, expired: Boolean) {
+        executePreSwipeTask()
+        performSwipeTop(point, artificial, object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animator: Animator) {
+                executePostSwipeTask(point)
+                if (!silent) {
+                    verticalCardsSwipeListener?.onSwipedTop(item, expired)
                 }
 
             }
@@ -372,7 +386,6 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         containers.last.setContainerEventListener(null)
         containers.last.firstTimeEventListener = null
         containers.last.setDraggable(false)
-
     }
 
     /***
@@ -385,13 +398,66 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count == 0) {
             return
         }
-        swipe(containers.first.getTopSwipeTargetPoint()
-                , containers.first.item, silent, artificial = true)
+        swipeTop(containers.first.getTopSwipeTargetPoint()
+                , containers.first.item, silent, artificial = true, expired = containers.first.isExpired())
     }
 
-    private fun performSwipe(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
-        performSwipeAnimationCallbackUnLock = false
 
+    /***
+     * It will swipe the top card to bottom
+     * safe to call if there's no card existed
+     * @param silent If silent is true it won't call listener
+     */
+    fun swipeBottom(silent: Boolean) {
+        ensureInitialized()
+        if (adapter.count == 0) {
+            return
+        }
+        swipeBottom(containers.first.getBottomSwipeTargetPoint()
+                , containers.first.item, silent, artificial = true, expired = containers.first.isExpired())
+    }
+
+    private fun performSwipeTop(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
+        performSwipeAnimationCallbackUnLock = false
+        containers.last.animate()
+                .translationX(0f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(200L)
+                .setUpdateListener(null)
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (performSwipeAnimationCallbackUnLock) {
+                            listener.onAnimationEnd(ObjectAnimator())
+                        } else {
+                            performSwipeAnimationCallbackUnLock = true
+                        }
+                    }
+                })
+                .start()
+
+        val ani = containers.first.animate()
+        if (artificial) {
+            ani.scaleX(0.5f).scaleY(0.5f)
+        }
+        ani.translationY(point.y.toFloat())
+                .setDuration(200L)
+                .setUpdateListener(null)
+                .setListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (performSwipeAnimationCallbackUnLock) {
+                            listener.onAnimationEnd(ObjectAnimator())
+                        } else {
+                            performSwipeAnimationCallbackUnLock = true
+                        }
+                    }
+                })
+                .start()
+    }
+
+    private fun performSwipeBottom(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
+        performSwipeAnimationCallbackUnLock = false
         containers.last.animate()
                 .translationX(0f)
                 .translationY(0f)
@@ -448,12 +514,12 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         view.translationY = 0f
         view.scaleX = 1f
         view.scaleY = 1f
-
     }
 
     private fun loadTopView() {
         val container = containers.first
         container.reset()
+        container.itemConfig = itemConfig
         if (adapter.count > 0) {
             container.setDraggable(true)
             container.setContainerEventListener(containerEventListener)
@@ -482,6 +548,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     private fun loadBottomView() {
         val container = containers.last
         container.reset()
+        container.itemConfig = itemConfig
         if (adapter.count > 1) {
             container.setDraggable(false)
             container.setContainerEventListener(null)
@@ -509,7 +576,6 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     private fun loadNextView() {
         loadBottomView()
-
         if (adapter.count > 0) {
             containers.first.setDraggable(true)
             containers.first.setContainerEventListener(containerEventListener)
@@ -518,7 +584,6 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun executePostSwipeTask(point: Point) {
-
         adapter.removeFirstItem()
         reorderForSwipe()
         clear()
@@ -526,21 +591,34 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         loadNextView()
     }
 
-    fun setOracleListener(oracleListener: OracleListener<T>) {
-        this.oracleListener = oracleListener
+
+    fun enableBottomAction(enable: Boolean): VerticalCardSwipe<T, VH> {
+        itemConfig.actionBottom = enable
+        return this
+    }
+
+    fun enableTopAction(enable: Boolean): VerticalCardSwipe<T, VH> {
+        itemConfig.actionTop = enable
+        return this
     }
 
     interface Updater<T> {
         fun update(oldItem: T, newItem: T)
     }
 
-    interface OracleListener<T> {
+    interface VerticalCardsStateListener<T> {
         fun onDragging(percent: Float)
-
         fun onMovedToOrigin(fromDirection: SwipeDirection)
+    }
 
-        fun onReleasedToAction(item: T?)
+    interface VerticalCardsSwipeListener<T> {
+        fun onSwipedTop(item: T?, expired: Boolean)
+        fun onSwipedBottom(item: T?, expired: Boolean)
 
-        fun onSwipedTop(item: T?)
+    }
+
+    interface VerticalCardsActionListener<T> {
+        fun onReleasedToActionBottom(item: T?, expired: Boolean)
+        fun onReleasedToActionTop(item: T?, expired: Boolean)
     }
 }
