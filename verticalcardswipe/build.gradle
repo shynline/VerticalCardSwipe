@@ -36,35 +36,35 @@ repositories {
 
 group='com.github.shynline'
 
-def githubProperties = new Properties()
-githubProperties.load(new FileInputStream(rootProject.file("github.properties")))
-
-def getVersionName = { ->
-    return "0.0.3"
-}
-
-def getArtificatId = { ->
-    return "verticalcardswipe"
-}
-
-publishing {
-    publications {
-        bar(MavenPublication) {
-            groupId 'com.shynline'
-            artifactId getArtificatId()
-            version getVersionName()
-            artifact("$buildDir/outputs/aar/${getArtificatId()}-release.aar")
-        }
-    }
-
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/shynline/VerticalCardSwipe")
-            credentials {
-                username = githubProperties['gpr.usr'] ?: System.getenv("GPR_USER")
-                password = githubProperties['gpr.key'] ?: System.getenv("GPR_API_KEY")
-            }
-        }
-    }
-}
+//def githubProperties = new Properties()
+//githubProperties.load(new FileInputStream(rootProject.file("github.properties")))
+//
+//def getVersionName = { ->
+//    return "0.0.3"
+//}
+//
+//def getArtificatId = { ->
+//    return "verticalcardswipe"
+//}
+//
+//publishing {
+//    publications {
+//        bar(MavenPublication) {
+//            groupId 'com.shynline'
+//            artifactId getArtificatId()
+//            version getVersionName()
+//            artifact("$buildDir/outputs/aar/${getArtificatId()}-release.aar")
+//        }
+//    }
+//
+//    repositories {
+//        maven {
+//            name = "GitHubPackages"
+//            url = uri("https://maven.pkg.github.com/shynline/VerticalCardSwipe")
+//            credentials {
+//                username = githubProperties['gpr.usr'] ?: System.getenv("GPR_USER")
+//                password = githubProperties['gpr.key'] ?: System.getenv("GPR_API_KEY")
+//            }
+//        }
+//    }
+//}
