@@ -20,7 +20,7 @@ dependencies {
 }
 ```
 
-### License
+## License
 ```License
 MIT License
 Copyright (c) 2020 Shayan Sabahi
