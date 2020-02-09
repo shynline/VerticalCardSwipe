@@ -12,6 +12,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import java.util.*
 
+/***
+ * VerticalCardSwipe
+ * a container for having 2 cards with ability of swiping vertically
+ */
 class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     val config = Config()
@@ -250,7 +254,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
                    , expireLayout: Int? = null
                    , expireLayoutInitializer: ((View) -> Unit)? = null): VerticalCardSwipe<T, VH> {
         if (initialized) {
-            throw RuntimeException("You can't call initializeTheOrb more than once")
+            throw IllegalStateException("You can't call initializeTheOrb more than once")
         }
         initialized = true
         this.adapter = adapter
@@ -592,33 +596,76 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
 
+    /***
+     * Enable or Disable Bottom action feature
+     */
     fun enableBottomAction(enable: Boolean): VerticalCardSwipe<T, VH> {
         itemConfig.actionBottom = enable
         return this
     }
 
+    /***
+     * Enable or Disable Top action feature
+     */
     fun enableTopAction(enable: Boolean): VerticalCardSwipe<T, VH> {
         itemConfig.actionTop = enable
         return this
     }
 
+    /***
+     * Updater interface
+     * use to handle updating an item
+     */
     interface Updater<T> {
+        /***
+         * Update the old item
+         */
         fun update(oldItem: T, newItem: T)
     }
 
+    /***
+     * A listener for getting state of the card
+     */
     interface VerticalCardsStateListener<T> {
+        /***
+         * On dragging state
+         */
         fun onDragging(percent: Float)
+
+        /***
+         * Calls when the card moved back to its origin position
+         */
         fun onMovedToOrigin(fromDirection: SwipeDirection)
     }
 
+    /***
+     * A listener for swipe events
+     */
     interface VerticalCardsSwipeListener<T> {
+        /***
+         * Calls when a card is swiped top
+         */
         fun onSwipedTop(item: T?, expired: Boolean)
+
+        /***
+         * Calls when a card is swiped bottom
+         */
         fun onSwipedBottom(item: T?, expired: Boolean)
 
     }
 
+    /***
+     * A listener for action events
+     */
     interface VerticalCardsActionListener<T> {
+        /***
+         * Calls when a card is swiped to action bottom
+         */
         fun onReleasedToActionBottom(item: T?, expired: Boolean)
+
+        /***
+         * Calls when a card is swiped to action top
+         */
         fun onReleasedToActionTop(item: T?, expired: Boolean)
     }
 }
