@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import java.util.*
+import kotlin.math.abs
 
 /***
  * VerticalCardSwipe
@@ -18,48 +19,95 @@ import java.util.*
  */
 class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
+    // Public variables
+    // Default configuration instantiation
     val config = Config()
-    private val containers = LinkedList<CardContainer<T>>()
-    private lateinit var adapter: VerticalCardAdapter<T, VH>
-    private var performSwipeAnimationCallbackUnLock = false
+
+    // State listener: notify changes in state of top card
     var verticalCardsStateListener: VerticalCardsStateListener<T>? = null
+    // Action listener: notify when user interact with cards
     var verticalCardsActionListener: VerticalCardsActionListener<T>? = null
+    // Swipe listener: notify when card is swiping
     var verticalCardsSwipeListener: VerticalCardsSwipeListener<T>? = null
 
+    // Private variables
+    // A linkedList container for storing CardContainer views
+    private val containers = LinkedList<CardContainer<T>>()
+
+    // VerticalCardSwipe Adapter needs to be initialized by user | null is not acceptable
+    private lateinit var adapter: VerticalCardAdapter<T, VH>
+
+    // Internal animation flag
+    private var performSwipeAnimationCallbackUnLock = false
+
+    // Overlay layouts ID | null means there's no overlay
+    // Top overlay will be shown when card is swiping top
     private var topLayout: Int? = null
+    // Top overlay will be shown when card is swiping bottom
     private var bottomLayout: Int? = null
+    // Top overlay will be shown when card is marked as expired ( by user )
     private var expireLayout: Int? = null
 
+    // Lambda functions which run after each overlay layout inflation
     private var topLayoutInitializer: ((View) -> Unit)? = null
     private var bottomLayoutInitializer: ((View) -> Unit)? = null
     private var expireLayoutInitializer: ((View) -> Unit)? = null
 
+    // ItemConfig default Initiation | ItemConfig indicates that the top card
+    // is going to swipe or act as an action and in which direction
     private val itemConfig = ItemConfig()
 
+    // Internal flag to track initialization
+    private var initialized = false
+
+    private fun ensureInitialized() {
+        if (!initialized) {
+            throw java.lang.RuntimeException("The method initializeTheOrb should be called first")
+        }
+    }
+
+    // A card listener which binds to the top card and react on drags, moves and actions
     private val containerEventListener = object : CardContainer.ContainerEventListener<T> {
+        // While dragging the percentage of dragging relative to the height of the card will pass
         override fun onContainerDragging(percentY: Float, expired: Boolean) {
+            // Position, Animation and, ... will be modified here
             update(percentY)
+            // Notify user state listener if exists
             verticalCardsStateListener?.onDragging(percentY)
         }
 
-        override fun onContainerMovedToOrigin(fromDirection: SwipeDirection, expired: Boolean) {
-            verticalCardsStateListener?.onMovedToOrigin(fromDirection)
+        // When the card didn't meet dragging threshold and returns to its original position
+        override fun onContainerMovedToOrigin(fromDirection: SwipeDirection, item: T?, expired: Boolean) {
+            // Notify user state listener if exists
+            verticalCardsStateListener?.onMovedToOrigin(fromDirection, item, expired)
         }
 
+        // When the card perform an action because it passed its threshold
+        // from bottom and returns to its original position
         override fun onContainerReleasedFromBottom(item: T?, expired: Boolean) {
+            // Notify user action listener if exists
             verticalCardsActionListener?.onReleasedToActionBottom(item, expired)
         }
 
+        // When the card perform an action because it passed its threshold
+        // from top and returns to its original position
         override fun onContainerReleasedFromTop(item: T?, expired: Boolean) {
+            // Notify user action listener if exists
             verticalCardsActionListener?.onReleasedToActionTop(item, expired)
         }
 
+        // When the card passed the designated threshold for swiping from top
+        // It calls the parent complete animations and possible notifications
         override fun onContainerSwipedTop(item: T?, point: Point, expired: Boolean) {
-            swipeTop(point, item, silent = false, artificial = false, expired = expired)
+            // Calling parent to finalize the card animation
+            swipe(point, item, silent = false, artificial = false, expired = expired, direction = SwipeDirection.Top)
         }
 
+        // When the card passed the designated threshold for swiping from bottom
+        // It calls the parent complete animations and possible notifications
         override fun onContainerSwipedBottom(item: T?, point: Point, expired: Boolean) {
-            swipeBottom(point, item, silent = false, artificial = false, expired = expired)
+            // Calling parent to finalize the card animation
+            swipe(point, item, silent = false, artificial = false, expired = expired, direction = SwipeDirection.Bottom)
         }
     }
 
@@ -88,7 +136,11 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      */
     fun addCard(item: T) {
         ensureInitialized()
+        // Simply add the item to adapter
         adapter.getItems().add(item)
+        // If we have one item we need to load the top card
+        // and if we have 2 item we have to load the bottom card
+        // otherwise both cards have been already shown and the new one went to back stack
         if (adapter.count == 1) {
             loadTopView()
         } else if (adapter.count == 2) {
@@ -150,10 +202,13 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      */
     fun removeCard(index: Int): Boolean {
         ensureInitialized()
+        //  Make sure index is in the bound | return false if not
         if (index >= adapter.count) {
             return false
         }
         when (index) {
+            // If the item which is going to be removed is visible we mark it as expired and
+            // call the onViewExpired on the adapter for that specific view
             0 -> {
                 adapter.onViewExpired(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
                 containers.first.setExpired()
@@ -162,6 +217,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
                 adapter.onViewExpired(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
                 containers.last.setExpired()
             }
+            // If the item is not visible we just remove it, like it didn't exist at all
             else -> adapter.getItems().removeAt(index)
         }
         return true
@@ -179,9 +235,11 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      */
     fun removeCard(item: T): Boolean {
         ensureInitialized()
+        // Finding the item to be removed ( equals should be implemented for this to work correctly)
         adapter.getItems().find {
             it == item
         }?.let {
+            // Remove it by index if such card exists
             return removeCard(adapter.getItems().indexOf(it))
         }
         return false
@@ -201,43 +259,35 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      */
     fun updateCard(newItem: T, updater: Updater<T>, addIfNotExist: Boolean): Boolean {
         ensureInitialized()
-        var index = -1
-        val size = adapter.count
 
-        for (i in 0 until size) {
-            if (adapter.getItems()[i] == newItem) {
-                index = i
-                break
+        adapter.getItems().find {
+            it == newItem
+        }?.let {
+            // Getting index of the item
+            val index = adapter.getItems().indexOf(it)
+            // Notifying user to update
+            updater.update(adapter.getItem(index), newItem)
+
+            // In case the item is visible we have to update the object in card container
+            // and call the onUpdateViewHolder method on adapter for the specific view
+            if (index == 0) { // update top card
+                adapter.onUpdateViewHolder(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
+                containers.first.item = it
+            } else if (index == 1) { // update bottom card
+                adapter.onUpdateViewHolder(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
+                containers.last.item = it
             }
-        }
-        if (index == -1) {
-            if (addIfNotExist) {
-                addCard(newItem)
-            }
-            return false
+            return true
         }
 
-        updater.update(adapter.getItem(index), newItem)
-
-        if (index == 0) { // update top card
-            adapter.onUpdateViewHolder(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
-            containers.first.item = adapter.getItem(index)
-        } else if (index == 1) { // update bottom card
-            adapter.onUpdateViewHolder(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
-            containers.last.item = adapter.getItem(index)
+        // If the card doesn't exist | return false
+        // We add it if user passed true for addIfNotExist flag
+        if (addIfNotExist) {
+            addCard(newItem)
         }
-
-        return true
-
+        return false
     }
 
-    private var initialized = false
-
-    private fun ensureInitialized() {
-        if (!initialized) {
-            throw java.lang.RuntimeException("The method initializeTheOrb should be called first")
-        }
-    }
 
     /***
      * This method needs to be called one time
@@ -247,51 +297,60 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
      * the corresponding callback will be called after inflating the View
      */
     fun initialize(adapter: VerticalCardAdapter<T, VH>
-                   , top_layout: Int? = null
+                   , topLayout: Int? = null
                    , topLayoutInitializer: ((View) -> Unit)? = null
-                   , bottom_layout: Int? = null
+                   , bottomLayout: Int? = null
                    , bottomLayoutInitializer: ((View) -> Unit)? = null
                    , expireLayout: Int? = null
                    , expireLayoutInitializer: ((View) -> Unit)? = null): VerticalCardSwipe<T, VH> {
         if (initialized) {
             throw IllegalStateException("You can't call initializeTheOrb more than once")
         }
+        // Setting the view as initiated
         initialized = true
+        // Assigning adapters, layout resource ids, and callbacks
         this.adapter = adapter
-        this.topLayout = top_layout
-        this.bottomLayout = bottom_layout
+        this.topLayout = topLayout
+        this.bottomLayout = bottomLayout
         this.expireLayout = expireLayout
         this.topLayoutInitializer = topLayoutInitializer
         this.bottomLayoutInitializer = bottomLayoutInitializer
         this.expireLayoutInitializer = expireLayoutInitializer
 
+        // Initializing the view
         init()
         return this
     }
 
     private fun createContainer(): CardContainer<T> {
+        // Instantiating a container
         val vcsContainer = CardContainer<T>(context)
-        val layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        val layoutParams = LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
 
-
+        // Applying configuration
+        // Assigning layout params
         layoutParams.setMargins(Utils.toPx(context, config.cardLeftMarginDP).toInt(), Utils.toPx(context, config.cardTopMarginDP).toInt(), Utils.toPx(context, config.cardRightMarginDP).toInt(), Utils.toPx(context, config.cardBottomMarginDP).toInt())
         vcsContainer.layoutParams = layoutParams
+        // Assigning radius
         vcsContainer.radius = Utils.toPx(context, config.cardRadiusDP)
-        if (topLayout != null) {
+
+        // Inflating and setting overlay if exists | calling corresponding callback for the view
+        // if it exists
+        topLayout?.let {
             val tv = LayoutInflater.from(context)
-                    .inflate(topLayout!!, vcsContainer.frameOverlayTop, false)
+                    .inflate(it, vcsContainer.frameOverlayTop, false)
             topLayoutInitializer?.invoke(tv)
             vcsContainer.frameOverlayTop.addView(tv)
         }
-        if (bottomLayout != null) {
+        bottomLayout?.let {
             val bv = LayoutInflater.from(context)
-                    .inflate(bottomLayout!!, vcsContainer.frameOverlayBottom, false)
+                    .inflate(it, vcsContainer.frameOverlayBottom, false)
             bottomLayoutInitializer?.invoke(bv)
             vcsContainer.frameOverlayBottom.addView(bv)
         }
-        if (expireLayout != null) {
+        expireLayout?.let {
             val ev = LayoutInflater.from(context)
-                    .inflate(expireLayout!!, vcsContainer.frameOverlayExpire, false)
+                    .inflate(it, vcsContainer.frameOverlayExpire, false)
             expireLayoutInitializer?.invoke(ev)
             vcsContainer.frameOverlayExpire.addView(ev)
         }
@@ -299,84 +358,86 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun init() {
+        // Clear everything
         removeAllViews()
         containers.clear()
-        // create top view
+        // create top view and add it to containers
         containers.add(createContainer())
-        // create bottom view
+        // create bottom view and add it to containers
         containers.add(createContainer())
 
         // Add cards to layout
         addView(containers.last)
         addView(containers.first)
 
+        // Force Cards to setup their origin position
         containers.first.setViewOriginY()
         containers.last.setViewOriginY()
 
+        // Pass on configuration to cards
         containers.first.setConfig(config)
         containers.last.setConfig(config)
 
+        // Removing all listeners ( not necessary! )
         containers.last.setContainerEventListener(null)
         containers.first.setContainerEventListener(null)
-
         containers.last.firstTimeEventListener = null
         containers.first.firstTimeEventListener = null
 
+        // Set their visibility to Gone (There is no items in the adapter)
         containers.first.visibility = View.GONE
         containers.last.visibility = View.GONE
+        // make sure position is set zero state
         update(0f)
     }
 
 
     private fun update(percentY: Float) {
+        // Getting the bottom cardContainer
         var view: CardContainer<*> = containers.last
 
-        var currentScale = 1f - config.scaleDiff
-        var nextScale = 1f
-        var percent = currentScale + (nextScale - currentScale) * Math.abs(percentY)
-        view.scaleX = percent
-        view.scaleY = percent
+        // Calculating bottom card container scale value base on percentY
+        var firstScale = 1f - config.bottomCardScaleDiff
+        var secondScale = 1f
+        var scale = firstScale + (secondScale - firstScale) * abs(percentY)
+        view.scaleX = scale
+        view.scaleY = scale
 
-        if (percentY <= 0 && !containers.first.itemConfig.actionTop) {
-            view = containers.first
-            currentScale = 1f
-            nextScale = 1f - config.scaleDiff * 2
-            percent = currentScale + (nextScale - currentScale) * Math.abs(percentY)
-            view.scaleX = percent
-            view.scaleY = percent
+        // If card is scrolling to top and actionTop is activated no need to resize
+        if (percentY <= 0 && containers.first.itemConfig.actionTop) {
+            return
         }
-        if (percentY >= 0 && !containers.first.itemConfig.actionBottom) {
-            view = containers.first
-            currentScale = 1f
-            nextScale = 1f - config.scaleDiff * 2
-            percent = currentScale + (nextScale - currentScale) * Math.abs(percentY)
-            view.scaleX = percent
-            view.scaleY = percent
+        // If card is scrolling to bottom and actionBottom is activated no need to resize
+        if (percentY >= 0 && containers.first.itemConfig.actionBottom) {
+            return
         }
 
-
+        // Getting the top cardContainer
+        view = containers.first
+        // Calculating top card container scale value base on percentY
+        firstScale = 1f
+        secondScale = 1f - config.topCardScaleDiff
+        scale = firstScale + (secondScale - firstScale) * abs(percentY)
+        view.scaleX = scale
+        view.scaleY = scale
     }
 
-    private fun swipeBottom(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false, expired: Boolean) {
-        executePreSwipeTask()
-        performSwipeBottom(point, artificial, object : AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animator: Animator) {
-                executePostSwipeTask(point)
-                if (!silent) {
-                    verticalCardsSwipeListener?.onSwipedBottom(item, expired)
-                }
 
-            }
-        })
-    }
-
-    private fun swipeTop(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false, expired: Boolean) {
+    private fun swipe(point: Point, item: T?, silent: Boolean = false, artificial: Boolean = false, expired: Boolean, direction: SwipeDirection) {
+        // Pre swipe tasks
         executePreSwipeTask()
-        performSwipeTop(point, artificial, object : AnimatorListenerAdapter() {
+        // Swiping
+        performSwipe(point, artificial, object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animator: Animator) {
-                executePostSwipeTask(point)
+                // Post swipe tasks
+                executePostSwipeTask()
+                // Notify Swipe listener if the call is not silent and the listener is not null
                 if (!silent) {
-                    verticalCardsSwipeListener?.onSwipedTop(item, expired)
+                    if (direction == SwipeDirection.Bottom) {
+                        verticalCardsSwipeListener?.onSwipedBottom(item, expired)
+                    } else {
+                        verticalCardsSwipeListener?.onSwipedTop(item, expired)
+                    }
                 }
 
             }
@@ -384,6 +445,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun executePreSwipeTask() {
+        // Remove all listeners and make Cards not draggable
         containers.first.setContainerEventListener(null)
         containers.first.firstTimeEventListener = null
         containers.first.setDraggable(false)
@@ -402,8 +464,14 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count == 0) {
             return
         }
-        swipeTop(containers.first.getTopSwipeTargetPoint()
-                , containers.first.item, silent, artificial = true, expired = containers.first.isExpired())
+        swipe(
+                point = containers.first.getTopSwipeTargetPoint(),
+                item = containers.first.item,
+                silent = silent,
+                artificial = true,
+                expired = containers.first.isExpired(),
+                direction = SwipeDirection.Top
+        )
     }
 
 
@@ -417,11 +485,19 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count == 0) {
             return
         }
-        swipeBottom(containers.first.getBottomSwipeTargetPoint()
-                , containers.first.item, silent, artificial = true, expired = containers.first.isExpired())
+        swipe(
+                point = containers.first.getBottomSwipeTargetPoint(),
+                item = containers.first.item,
+                silent = silent,
+                artificial = true,
+                expired = containers.first.isExpired(),
+                direction = SwipeDirection.Bottom
+        )
     }
 
-    private fun performSwipeTop(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
+    private fun performSwipe(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
+        // Animate both cards to complete the swipe
+        // TODO: needs a better approach
         performSwipeAnimationCallbackUnLock = false
         containers.last.animate()
                 .translationX(0f)
@@ -441,50 +517,11 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
                 })
                 .start()
 
-        val ani = containers.first.animate()
+        val animator = containers.first.animate()
         if (artificial) {
-            ani.scaleX(0.5f).scaleY(0.5f)
+            animator.scaleX(0.5f).scaleY(0.5f)
         }
-        ani.translationY(point.y.toFloat())
-                .setDuration(200L)
-                .setUpdateListener(null)
-                .setListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (performSwipeAnimationCallbackUnLock) {
-                            listener.onAnimationEnd(ObjectAnimator())
-                        } else {
-                            performSwipeAnimationCallbackUnLock = true
-                        }
-                    }
-                })
-                .start()
-    }
-
-    private fun performSwipeBottom(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
-        performSwipeAnimationCallbackUnLock = false
-        containers.last.animate()
-                .translationX(0f)
-                .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(200L)
-                .setUpdateListener(null)
-                .setListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (performSwipeAnimationCallbackUnLock) {
-                            listener.onAnimationEnd(ObjectAnimator())
-                        } else {
-                            performSwipeAnimationCallbackUnLock = true
-                        }
-                    }
-                })
-                .start()
-
-        val ani = containers.first.animate()
-        if (artificial) {
-            ani.scaleX(0.5f).scaleY(0.5f)
-        }
-        ani.translationY(point.y.toFloat())
+        animator.translationY(point.y.toFloat())
                 .setDuration(200L)
                 .setUpdateListener(null)
                 .setListener(object : AnimatorListenerAdapter() {
@@ -500,19 +537,21 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun moveToBottom(container: CardContainer<*>) {
+        // Bring the card to behind
         val parent = container.parent as VerticalCardSwipe<*, *>
         parent.removeView(container)
         parent.addView(container, 0)
-
-
     }
 
     private fun reorderForSwipe() {
+        // Swap CardContainer views
+        // Change in parent
         moveToBottom(containers.first)
+        // Change in back stack
         containers.addLast(containers.removeFirst())
     }
 
-    private fun clear() {
+    private fun resetScaleAndTranslationOfBottomContainer() {
         val view = containers.last
         view.translationX = 0f
         view.translationY = 0f
@@ -521,27 +560,42 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun loadTopView() {
+        // Get the top container
         val container = containers.first
+        // Reset the container's state
         container.reset()
+        // Assigning item configuration
         container.itemConfig = itemConfig
         if (adapter.count > 0) {
+            // There is at least one item available
+            // make it draggable and setup the listeners
             container.setDraggable(true)
             container.setContainerEventListener(containerEventListener)
             container.firstTimeEventListener = firstTimeEventListener
+
+            // Getting view from adapter if it doesn't exist the adapter will create one
             val child = adapter.getView(0,
-                    container.frameContent.getChildAt(0), container.frameContent)
+                    container.frameContent.getChildAt(0),
+                    container.frameContent)
+            // Adding the view to container hierarchy if it doesn't exist
             if (container.frameContent.childCount == 0) {
                 container.frameContent.addView(child)
             }
+            // Get the first item in adapter
             val item = adapter.getItem(0)
+            // If the item implements Ads interface
+            // Set the container as ad if the item is marked as ad
             if (item is Ads) {
                 if (item.isCurrentItemAd()) {
                     container.setAsAds()
                 }
             }
+            // Set the item
             container.item = item
+            // Make container visible
             container.setVisibility(View.VISIBLE)
         } else {
+            // If adapter is empty make the container not draggable, remove the listeners and make the visibility Gone
             container.setDraggable(false)
             container.setContainerEventListener(null)
             container.firstTimeEventListener = null
@@ -550,27 +604,40 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun loadBottomView() {
+        // Get the bottom container
         val container = containers.last
+        // Reset the container's state
         container.reset()
+        // Assigning item configuration
         container.itemConfig = itemConfig
         if (adapter.count > 1) {
+            // There is at least two item available
+            // make it draggable and setup the listeners
             container.setDraggable(false)
             container.setContainerEventListener(null)
             container.firstTimeEventListener = null
+            // Getting view from adapter if it doesn't exist the adapter will create one
             val child = adapter.getView(1,
                     container.frameContent.getChildAt(0), container.frameContent)
+            // Adding the view to container hierarchy if it doesn't exist
             if (container.frameContent.childCount == 0) {
                 container.frameContent.addView(child)
             }
+            // Get the second item in adapter
             val item = adapter.getItem(1)
+            // If the item implements Ads interface
+            // Set the container as ad if the item is marked as ad
             if (item is Ads) {
                 if (item.isCurrentItemAd()) {
                     container.setAsAds()
                 }
             }
+            // Set the item
             container.item = item
+            // Make container visible
             container.setVisibility(View.VISIBLE)
         } else {
+            // If adapter is empty make the container not draggable, remove the listeners and make the visibility Gone
             container.setDraggable(false)
             container.setContainerEventListener(null)
             container.firstTimeEventListener = null
@@ -579,7 +646,9 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
     }
 
     private fun loadNextView() {
+        // Load the next view which is bottom view
         loadBottomView()
+        // If the adapter is not empty set the top view draggable and setup the internal listeners
         if (adapter.count > 0) {
             containers.first.setDraggable(true)
             containers.first.setContainerEventListener(containerEventListener)
@@ -587,11 +656,16 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         }
     }
 
-    private fun executePostSwipeTask(point: Point) {
+    private fun executePostSwipeTask() {
+        // Removing the swiped item
         adapter.removeFirstItem()
+        // Swap Cards
         reorderForSwipe()
-        clear()
+        // Reset the swiped card to its original position
+        resetScaleAndTranslationOfBottomContainer()
+        // Reset physical state of cards
         update(0f)
+        // Load the next view to bottom card
         loadNextView()
     }
 
@@ -635,7 +709,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         /***
          * Calls when the card moved back to its origin position
          */
-        fun onMovedToOrigin(fromDirection: SwipeDirection)
+        fun onMovedToOrigin(fromDirection: SwipeDirection, item: T?, expired: Boolean)
     }
 
     /***

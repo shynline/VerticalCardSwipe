@@ -431,7 +431,7 @@ internal class CardContainer<T> : CardView {
 
         fun onContainerSwipedBottom(item: T?, point: Point, expired: Boolean)
 
-        fun onContainerMovedToOrigin(fromDirection: SwipeDirection, expired: Boolean)
+        fun onContainerMovedToOrigin(fromDirection: SwipeDirection, item: T?, expired: Boolean)
 
         fun onContainerReleasedFromBottom(item: T?, expired: Boolean)
         fun onContainerReleasedFromTop(item: T?, expired: Boolean)
