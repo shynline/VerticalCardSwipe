@@ -2,6 +2,7 @@ package com.shynline.verticalcardswipe
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Point
 import android.util.AttributeSet
@@ -12,28 +13,67 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.cardview.widget.CardView
 import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 internal class CardContainer<T> : CardView {
 
-    private var containerEventListener: ContainerEventListener<T>? = null
+    // Public fields set by parent
+    // first time event listener
     var firstTimeEventListener: FirstTimeEventListener<T>? = null
-    private var viewConfiguration: ViewConfiguration? = null
-    private lateinit var config: Config
+    // item configuration
     var itemConfig = ItemConfig()
+    // current item
     var item: T? = null
+    // event listener
+    var containerEventListener: ContainerEventListener<T>? = null
+    // none null configuration object should be assign by parent
+    var config = Config()
+    // Determine if this card is draggable or not
+    var isDraggable = false
 
+    // Private fields
+    // view configurations params
+    private var viewConfiguration: ViewConfiguration? = null
+    // swipe target points
     private var topSwipeTargetPoint: Point? = null
     private var bottomSwipeTargetPoint: Point? = null
+    // original Y position for this card
     private var viewOriginY = 0f
+    // Touch control variables
     private var motionOriginX: Float = 0.toFloat()
     private var motionOriginY: Float = 0.toFloat()
     private var intercepted = false
     private var isDragging = false
-    private var isDraggable = false
-    private var expired = false
+
+    // expired flag
+    var expired = false
+        set(value) {
+            field = value
+            // Hide the top and bottom overlay
+            // TODO: Animate hiding overlays
+            frameOverlayBottom.alpha = 0f
+            frameOverlayTop.alpha = 0f
+            // Lock the card if it's necessary
+            bottomLock = config.preventSwipeBottomIfExpired
+            topLock = config.preventSwipeTopIfExpired
+            // Move the Card to its original position
+            moveToOrigin()
+            // Animate the expire viewGroup to be visible
+            frameOverlayExpire.animate().alpha(1f)
+                    .setDuration(300L)
+                    .setInterpolator(OvershootInterpolator(1.0f))
+                    .setUpdateListener(null)
+                    .setListener(null)
+                    .start()
+        }
+
+    // Swipe lock flags to constraint the card
     private var bottomLock: Boolean = false
     private var topLock: Boolean = false
 
+
+    // ViewGroups
     lateinit var frameContent: FrameLayout
     lateinit var frameOverlayTop: FrameLayout
     lateinit var frameOverlayBottom: FrameLayout
@@ -42,14 +82,9 @@ internal class CardContainer<T> : CardView {
 
     private val percentY: Float
         get() {
-            var percent = 2f * (translationY - viewOriginY) / height
-            if (percent > 1) {
-                percent = 1f
-            }
-            if (percent < -1) {
-                percent = -1f
-            }
-            return percent
+            // Calculate the Y-Axis movement percentage of the card
+            val py = max(-1f, min(1f, 2f * (translationY - viewOriginY) / height))
+            return if (py.isNaN()) 0f else py
         }
 
     constructor(context: Context) : super(context) {
@@ -64,16 +99,16 @@ internal class CardContainer<T> : CardView {
         init()
     }
 
-    internal fun setConfig(config: Config) {
-        this.config = config
-    }
-
 
     private fun init() {
+        // Initializing the card
         viewConfiguration = ViewConfiguration.get(context)
+        // Inflating base layout
         val v = LayoutInflater.from(context)
                 .inflate(R.layout.base, this, false)
+        // Add the inflated view to view hierarchy
         addView(v)
+        // Assignment of content viewGroup and its overlays
         frameContent = v.findViewById(R.id.frame_content)
         frameOverlayTop = v.findViewById(R.id.frame_overlay_top)
         frameOverlayBottom = v.findViewById(R.id.frame_overlay_bottom)
@@ -81,34 +116,19 @@ internal class CardContainer<T> : CardView {
     }
 
     internal fun setAsAds() {
+        // Hide the overlays
         frameOverlayBottom.alpha = 0f
         frameOverlayTop.alpha = 0f
         frameOverlayExpire.alpha = 0f
+        // Lock the swiping functionality of the card
+        // It can be locked both way
         bottomLock = config.preventSwipeBottomIfAd
         topLock = config.preventSwipeTopIfAd
 
     }
 
-    internal fun isExpired(): Boolean {
-        return expired
-    }
-
-    internal fun setExpired() {
-        frameOverlayBottom.alpha = 0f
-        frameOverlayTop.alpha = 0f
-        this.expired = true
-        bottomLock = config.preventSwipeBottomIfExpired
-        topLock = config.preventSwipeTopIfExpired
-        moveToOrigin()
-        frameOverlayExpire.animate().alpha(1f)
-                .setDuration(300L)
-                .setInterpolator(OvershootInterpolator(1.0f))
-                .setUpdateListener(null)
-                .setListener(null)
-                .start()
-    }
-
     internal fun reset() {
+        // Reset all variable to its default state
         itemConfig = ItemConfig()
         bottomLock = false
         topLock = false
@@ -125,6 +145,7 @@ internal class CardContainer<T> : CardView {
             motionOriginY = ev.rawY
             intercepted = false
         } else if (ev.actionMasked == MotionEvent.ACTION_MOVE) {
+            // If the touch event is Vertical, we'll intercept it
             if (abs(ev.rawX - motionOriginX) < viewConfiguration!!.scaledPagingTouchSlop) {
                 if (abs(ev.rawY - motionOriginY) > viewConfiguration!!.scaledTouchSlop) {
                     intercepted = true
@@ -136,6 +157,8 @@ internal class CardContainer<T> : CardView {
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        // Control dispatching the touch events
+        // We don't let the card dispatch events if it's middle of parent animation
         if (!isDraggable) {
             return false
         }
@@ -143,24 +166,17 @@ internal class CardContainer<T> : CardView {
         return true
     }
 
-    internal fun getTopSwipeTargetPoint(): Point {
-        if (topSwipeTargetPoint == null) {
-            return Point(x.toInt(),
-                    viewOriginY.toInt() - height)
-            // I don't want to initiate here
-        }
-        return topSwipeTargetPoint!!
+    internal fun getTopSwipeTargetPoint(): Point? {
+        initializeTargetPoints()
+        return topSwipeTargetPoint
     }
 
-    internal fun getBottomSwipeTargetPoint(): Point {
-        if (bottomSwipeTargetPoint == null) {
-            return Point(x.toInt(),
-                    viewOriginY.toInt() + height)
-            // I don't want to initiate here
-        }
-        return bottomSwipeTargetPoint!!
+    internal fun getBottomSwipeTargetPoint(): Point? {
+        initializeTargetPoints()
+        return bottomSwipeTargetPoint
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_UP -> handleActionUp(event)
@@ -169,112 +185,205 @@ internal class CardContainer<T> : CardView {
         return true
     }
 
-    internal fun setDraggable(draggable: Boolean) {
-        isDraggable = draggable
+    private fun handleActionMove(event: MotionEvent) {
+        isDragging = true
+        // update translationY of this card
+        updateTranslation(event)
+
+        val py = percentY
+        // Notifying parent
+        containerEventListener?.onContainerDragging(py, expired)
+
+        // If the item is expired e.g: being removed
+        if (expired)
+            return
+        // Handling Overlays
+        if (py >= 0) {
+            frameOverlayBottom.alpha = py * (1 / config.bottomDragLimit * config.bottomOverlaySoftener)
+            frameOverlayTop.alpha = 0f
+        } else if (py < 0) {
+            frameOverlayBottom.alpha = 0f
+            frameOverlayTop.alpha = -py * config.topOverLayHardener
+        }
+
     }
 
 
+    private fun handleActionUp(event: MotionEvent) {
+        // If is not dragging no need to do anything
+        if (isDragging.not())
+            return
+        isDragging = false
+        initializeTargetPoints()
+
+        val motionCurrentY = event.rawY
+
+        // Determine the direction
+        val swipeDirection = if (motionCurrentY - motionOriginY > 0)
+            SwipeDirection.Bottom
+        else
+            SwipeDirection.Top
+
+        val py = percentY
+        if (swipeDirection == SwipeDirection.Top) {
+            if (itemConfig.actionTop) {
+                // Top action case
+                handleSwipeToActionUp(swipeDirection)
+            } else {
+                // Swipe top case
+                handleSwipeUp(swipeDirection, py)
+            }
+        } else {  //swipeDirection != SwipeDirection.Top
+            if (itemConfig.actionBottom) {
+                // Bottom action case
+                handleSwipeToActionBottom(swipeDirection)
+            } else {
+                // Swipe bottom case
+                handleSwipeBottom(swipeDirection, py)
+            }
+        }
+    }
+
     private fun handleSwipeToActionUp(swipeDirection: SwipeDirection) {
+
         if (translationY < config.topDragCallThreshold * height) {
+            // Swipe threshold has been satisfied
             if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
+                // It's first time we pause the view until user respond
                 firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
                     override fun proceed() {
+                        // Proceed the action by moving to original position
+                        // and notifying parent
                         moveToOriginOnAction {
                             containerEventListener?.onContainerReleasedFromTop(item, expired)
                         }
                     }
 
                     override fun cancel() {
+                        // user requested revert the action
+                        // return to original position and notify parent
                         moveToOrigin()
-                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
                     }
                 })
             } else {
+                // It's not first time
+                // So move the card to original position and notify the parent
                 moveToOriginOnAction {
                     containerEventListener?.onContainerReleasedFromTop(item, expired)
                 }
             }
         } else {
+            // If the swipe threshold is not satisfied
+            // return to original position and notify parent
             moveToOrigin()
-            containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+            containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
 
-        }
-    }
-
-    private fun handleSwipeUp(swipeDirection: SwipeDirection, percent: Float) {
-        if (abs(percent) > config.swipeThreshold) {
-            if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
-                firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
-                    override fun proceed() {
-                        frameOverlayTop.alpha = 1f
-                        containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
-                    }
-
-                    override fun cancel() {
-                        moveToOrigin()
-                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
-                    }
-                })
-            } else {
-                frameOverlayTop.alpha = 1f
-                containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
-            }
-
-        } else {
-            moveToOrigin()
-            containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
         }
     }
 
     private fun handleSwipeToActionBottom(swipeDirection: SwipeDirection) {
         if (translationY > config.bottomDragCallThreshold * height) {
+            // Swipe threshold has been satisfied
             if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
+                // It's first time we pause the view until user respond
                 firstTimeEventListener?.swipingBottomPaused(item, object : FirstTimeActions {
+                    // Proceed the action by moving to original position
+                    // and notifying parent
                     override fun proceed() {
                         moveToOriginOnAction {
                             containerEventListener?.onContainerReleasedFromBottom(item, expired)
                         }
                     }
 
+                    // user requested revert the action
+                    // return to original position and notify parent
                     override fun cancel() {
                         moveToOrigin()
-                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
                     }
                 })
             } else {
+                // It's not first time
+                // So move the card to original position and notify the parent
                 moveToOriginOnAction {
                     containerEventListener?.onContainerReleasedFromBottom(item, expired)
                 }
 
             }
         } else {
+            // If the swipe threshold is not satisfied
+            // return to original position and notify parent
             moveToOrigin()
-            containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+            containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
         }
     }
 
+    private fun handleSwipeUp(swipeDirection: SwipeDirection, percent: Float) {
+        if (abs(percent) > config.swipeThreshold) {
+            // Swipe condition has been satisfied
+            if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
+                // First time swipe
+                firstTimeEventListener?.swipingTopPaused(item, object : FirstTimeActions {
+                    // User want to proceed | make overlay visible and notify the parent
+                    override fun proceed() {
+                        frameOverlayTop.alpha = 1f
+                        containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
+                    }
+
+                    // User want to undo the swipe
+                    // return to origin and call the parent
+                    override fun cancel() {
+                        moveToOrigin()
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
+                    }
+                })
+            } else {
+                // not first time | make overlay visible and notify the parent
+                frameOverlayTop.alpha = 1f
+                containerEventListener?.onContainerSwipedTop(item, topSwipeTargetPoint!!, expired)
+            }
+
+        } else {
+            // Swipe threshold has not been satisfied
+            // return to origin and notify the parent
+            moveToOrigin()
+            containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
+        }
+    }
+
+
+
     private fun handleSwipeBottom(swipeDirection: SwipeDirection, percent: Float) {
         if (abs(percent) > config.swipeThreshold) {
+            // Swipe condition has been satisfied
             if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
+                // First time swipe
                 firstTimeEventListener?.swipingBottomPaused(item, object : FirstTimeActions {
+                    // User want to proceed | make overlay visible and notify the parent
                     override fun proceed() {
                         frameOverlayTop.alpha = 1f
                         containerEventListener?.onContainerSwipedBottom(item, bottomSwipeTargetPoint!!, expired)
                     }
 
+                    // User want to undo the swipe
+                    // return to origin and call the parent
                     override fun cancel() {
                         moveToOrigin()
-                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+                        containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
                     }
                 })
             } else {
+                // not first time | make overlay visible and notify the parent
                 frameOverlayTop.alpha = 1f
                 containerEventListener?.onContainerSwipedBottom(item, bottomSwipeTargetPoint!!, expired)
             }
 
         } else {
+            // Swipe threshold has not been satisfied
+            // return to origin and notify the parent
             moveToOrigin()
-            containerEventListener?.onContainerMovedToOrigin(swipeDirection, expired)
+            containerEventListener?.onContainerMovedToOrigin(swipeDirection, item, expired)
         }
     }
 
@@ -287,37 +396,12 @@ internal class CardContainer<T> : CardView {
         }
     }
 
-    private fun handleActionUp(event: MotionEvent) {
-        if (isDragging.not())
-            return
-        isDragging = false
-        initializeTargetPoints()
 
-        val motionCurrentY = event.rawY
-
-        val swipeDirection = if (motionCurrentY - motionOriginY > 0)
-            SwipeDirection.Bottom
-        else
-            SwipeDirection.Top
-
-        val percent = percentY
-        if (swipeDirection == SwipeDirection.Top) {
-            if (itemConfig.actionTop) {
-                handleSwipeToActionUp(swipeDirection)
-            } else {
-                handleSwipeUp(swipeDirection, percent)
-            }
-        } else {  //swipeDirection != SwipeDirection.Top
-            if (itemConfig.actionBottom) {
-                handleSwipeToActionBottom(swipeDirection)
-            } else {
-                handleSwipeBottom(swipeDirection, percent)
-            }
-        }
-    }
-
-
+    /***
+     * This method animates the card to its original position and calls the callback on finish
+     */
     private fun moveToOriginOnAction(callback: () -> Unit) {
+        // Animating the card
         animate().scaleX(1f).scaleY(1f)
                 .translationY(viewOriginY)
                 .setDuration(300L)
@@ -329,6 +413,7 @@ internal class CardContainer<T> : CardView {
                     }
                 })
                 .start()
+        // Animating overlays
         frameOverlayTop.animate().alpha(0f)
                 .setDuration(300L)
                 .setInterpolator(OvershootInterpolator(1.0f))
@@ -344,17 +429,17 @@ internal class CardContainer<T> : CardView {
     }
 
     private fun moveToOrigin() {
+        // return to origin and call parent on update
         animate().scaleX(1f).scaleY(1f)
                 .translationY(viewOriginY)
                 .setDuration(300L)
                 .setInterpolator(OvershootInterpolator(1.0f))
                 .setUpdateListener {
-                    if (containerEventListener != null) {
-                        containerEventListener!!.onContainerDragging(percentY, expired)
-                    }
+                    containerEventListener?.onContainerDragging(percentY, expired)
                 }
                 .setListener(null)
                 .start()
+        // Animating Overlay
         frameOverlayTop.animate().alpha(0f)
                 .setDuration(300L)
                 .setInterpolator(OvershootInterpolator(1.0f))
@@ -370,31 +455,18 @@ internal class CardContainer<T> : CardView {
 
     }
 
-    private fun handleActionMove(event: MotionEvent) {
-        isDragging = true
-        updateTranslation(event)
-        val py = percentY
-        containerEventListener?.onContainerDragging(py, expired)
-
-        if (expired)
-            return
-        if (py >= 0) {
-            frameOverlayBottom.alpha = py * (1 / config!!.bottomDragLimit * config!!.bottomOverlaySoftener)
-            frameOverlayTop.alpha = 0f
-        } else if (py < 0) {
-            frameOverlayBottom.alpha = 0f
-            frameOverlayTop.alpha = -py * config!!.topOverLayHardener
-        }
-
-    }
 
     private fun updateTranslation(event: MotionEvent) {
+        // calculating the drift
         val diff = event.rawY - motionOriginY
+        // cases where the card can not swipe because of lock
         if (diff > 0 && bottomLock)
             return
         if (diff < 0 && topLock)
             return
+        // calculated translation which is sum of diff and
         var value = viewOriginY + diff
+        // If the card suppose to be clamped
         if (itemConfig.actionBottom) {
             if (value > height * config.bottomDragLimit) {
                 value = height * config.bottomDragLimit
@@ -408,13 +480,6 @@ internal class CardContainer<T> : CardView {
         translationY = value
     }
 
-    /**
-     * ContainerEventListener
-     */
-    fun setContainerEventListener(containerEventListener: ContainerEventListener<T>?) {
-        this.containerEventListener = containerEventListener
-    }
-
 
     internal fun setViewOriginY() {
         viewOriginY = translationY
@@ -425,6 +490,7 @@ internal class CardContainer<T> : CardView {
      * ContainerEventListener
      */
     internal interface ContainerEventListener<T> {
+
         fun onContainerDragging(percentY: Float, expired: Boolean)
 
         fun onContainerSwipedTop(item: T?, point: Point, expired: Boolean)
@@ -434,8 +500,8 @@ internal class CardContainer<T> : CardView {
         fun onContainerMovedToOrigin(fromDirection: SwipeDirection, item: T?, expired: Boolean)
 
         fun onContainerReleasedFromBottom(item: T?, expired: Boolean)
-        fun onContainerReleasedFromTop(item: T?, expired: Boolean)
 
+        fun onContainerReleasedFromTop(item: T?, expired: Boolean)
     }
 
 }

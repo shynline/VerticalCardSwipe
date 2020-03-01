@@ -211,11 +211,11 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
             // call the onViewExpired on the adapter for that specific view
             0 -> {
                 adapter.onViewExpired(adapter.getHolder(containers.first.frameContent.getChildAt(0)), 0)
-                containers.first.setExpired()
+                containers.first.expired = true
             }
             1 -> {
                 adapter.onViewExpired(adapter.getHolder(containers.last.frameContent.getChildAt(0)), 1)
-                containers.last.setExpired()
+                containers.last.expired = true
             }
             // If the item is not visible we just remove it, like it didn't exist at all
             else -> adapter.getItems().removeAt(index)
@@ -354,6 +354,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
             expireLayoutInitializer?.invoke(ev)
             vcsContainer.frameOverlayExpire.addView(ev)
         }
+        vcsContainer.reset()
         return vcsContainer
     }
 
@@ -375,12 +376,12 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         containers.last.setViewOriginY()
 
         // Pass on configuration to cards
-        containers.first.setConfig(config)
-        containers.last.setConfig(config)
+        containers.first.config = config
+        containers.last.config = config
 
         // Removing all listeners ( not necessary! )
-        containers.last.setContainerEventListener(null)
-        containers.first.setContainerEventListener(null)
+        containers.last.containerEventListener = null
+        containers.first.containerEventListener = null
         containers.last.firstTimeEventListener = null
         containers.first.firstTimeEventListener = null
 
@@ -446,12 +447,12 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
 
     private fun executePreSwipeTask() {
         // Remove all listeners and make Cards not draggable
-        containers.first.setContainerEventListener(null)
+        containers.first.containerEventListener = null
         containers.first.firstTimeEventListener = null
-        containers.first.setDraggable(false)
-        containers.last.setContainerEventListener(null)
+        containers.first.isDraggable = false
+        containers.last.containerEventListener = null
         containers.last.firstTimeEventListener = null
-        containers.last.setDraggable(false)
+        containers.last.isDraggable = false
     }
 
     /***
@@ -464,14 +465,16 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count == 0) {
             return
         }
-        swipe(
-                point = containers.first.getTopSwipeTargetPoint(),
-                item = containers.first.item,
-                silent = silent,
-                artificial = true,
-                expired = containers.first.isExpired(),
-                direction = SwipeDirection.Top
-        )
+        containers.first.getTopSwipeTargetPoint()?.let {
+            swipe(
+                    point = it,
+                    item = containers.first.item,
+                    silent = silent,
+                    artificial = true,
+                    expired = containers.first.expired,
+                    direction = SwipeDirection.Top
+            )
+        }
     }
 
 
@@ -485,14 +488,16 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count == 0) {
             return
         }
-        swipe(
-                point = containers.first.getBottomSwipeTargetPoint(),
-                item = containers.first.item,
-                silent = silent,
-                artificial = true,
-                expired = containers.first.isExpired(),
-                direction = SwipeDirection.Bottom
-        )
+        containers.first.getBottomSwipeTargetPoint()?.let {
+            swipe(
+                    point = it,
+                    item = containers.first.item,
+                    silent = silent,
+                    artificial = true,
+                    expired = containers.first.expired,
+                    direction = SwipeDirection.Bottom
+            )
+        }
     }
 
     private fun performSwipe(point: Point, artificial: Boolean, listener: Animator.AnimatorListener) {
@@ -569,8 +574,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count > 0) {
             // There is at least one item available
             // make it draggable and setup the listeners
-            container.setDraggable(true)
-            container.setContainerEventListener(containerEventListener)
+            container.isDraggable = true
+            container.containerEventListener = containerEventListener
             container.firstTimeEventListener = firstTimeEventListener
 
             // Getting view from adapter if it doesn't exist the adapter will create one
@@ -596,8 +601,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
             container.setVisibility(View.VISIBLE)
         } else {
             // If adapter is empty make the container not draggable, remove the listeners and make the visibility Gone
-            container.setDraggable(false)
-            container.setContainerEventListener(null)
+            container.isDraggable = false
+            container.containerEventListener = null
             container.firstTimeEventListener = null
             container.setVisibility(View.GONE)
         }
@@ -613,8 +618,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         if (adapter.count > 1) {
             // There is at least two item available
             // make it draggable and setup the listeners
-            container.setDraggable(false)
-            container.setContainerEventListener(null)
+            container.isDraggable = false
+            container.containerEventListener = null
             container.firstTimeEventListener = null
             // Getting view from adapter if it doesn't exist the adapter will create one
             val child = adapter.getView(1,
@@ -638,8 +643,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
             container.setVisibility(View.VISIBLE)
         } else {
             // If adapter is empty make the container not draggable, remove the listeners and make the visibility Gone
-            container.setDraggable(false)
-            container.setContainerEventListener(null)
+            container.isDraggable = false
+            container.containerEventListener = null
             container.firstTimeEventListener = null
             container.setVisibility(View.GONE)
         }
@@ -650,8 +655,8 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         loadBottomView()
         // If the adapter is not empty set the top view draggable and setup the internal listeners
         if (adapter.count > 0) {
-            containers.first.setDraggable(true)
-            containers.first.setContainerEventListener(containerEventListener)
+            containers.first.isDraggable = true
+            containers.first.containerEventListener = containerEventListener
             containers.first.firstTimeEventListener = firstTimeEventListener
         }
     }
