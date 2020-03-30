@@ -1,8 +1,6 @@
 package com.shynline.verticalcardswipe
 
-class ItemModelView(var text: String) : Ads {
-    var id: Long = 0
-    var ad = false
+data class ItemModelView(var text: String, var id: Long = 0, var ad : Boolean = false) : Ads {
 
     init {
         this.id = idHolder
@@ -11,19 +9,6 @@ class ItemModelView(var text: String) : Ads {
 
     override fun isCurrentItemAd(): Boolean {
         return ad
-    }
-
-
-    override fun equals(other: Any?): Boolean {
-        return if (other is ItemModelView) {
-            other.id == id
-        } else false
-    }
-
-    override fun hashCode(): Int {
-        var result = text.hashCode()
-        result = 31 * result + id.hashCode()
-        return result
     }
 
     companion object {
