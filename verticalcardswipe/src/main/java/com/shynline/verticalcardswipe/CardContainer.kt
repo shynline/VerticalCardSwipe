@@ -50,22 +50,24 @@ internal class CardContainer<T> : CardView {
     var expired = false
         set(value) {
             field = value
-            // Hide the top and bottom overlay
-            // TODO: Animate hiding overlays
-            frameOverlayBottom.alpha = 0f
-            frameOverlayTop.alpha = 0f
-            // Lock the card if it's necessary
-            bottomLock = config.preventSwipeBottomIfExpired
-            topLock = config.preventSwipeTopIfExpired
-            // Move the Card to its original position
-            moveToOrigin()
-            // Animate the expire viewGroup to be visible
-            frameOverlayExpire.animate().alpha(1f)
-                    .setDuration(300L)
-                    .setInterpolator(OvershootInterpolator(1.0f))
-                    .setUpdateListener(null)
-                    .setListener(null)
-                    .start()
+            if (value) {
+                // Hide the top and bottom overlay
+                // TODO: Animate hiding overlays
+                frameOverlayBottom.alpha = 0f
+                frameOverlayTop.alpha = 0f
+                // Lock the card if it's necessary
+                bottomLock = config.preventSwipeBottomIfExpired
+                topLock = config.preventSwipeTopIfExpired
+                // Move the Card to its original position
+                moveToOrigin()
+                // Animate the expire viewGroup to be visible
+                frameOverlayExpire.animate().alpha(1f)
+                        .setDuration(300L)
+                        .setInterpolator(OvershootInterpolator(1.0f))
+                        .setUpdateListener(null)
+                        .setListener(null)
+                        .start()
+            }
         }
 
     // Swipe lock flags to constraint the card
