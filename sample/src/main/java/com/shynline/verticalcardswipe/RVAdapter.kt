@@ -5,8 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.request.RequestOptions
 import java.util.*
 
 class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapter<RVAdapter.ViewHolder>() {
@@ -21,9 +19,9 @@ class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapte
 //        val rnd = Random()
 //        val color = Color.argb(255, rnd.nextInt(256), rnd.nextInt(256), rnd.nextInt(256))
 //        holder.root.setBackgroundColor(color)
-        Glide.with(holder.image).load("https://picsum.photos/300/600?temp=${UUID.randomUUID()}")
-                .apply(RequestOptions().centerCrop())
-                .into(holder.image)
+//        Glide.with(holder.image).load("https://picsum.photos/300/600?temp=${UUID.randomUUID()}")
+//                .apply(RequestOptions().centerCrop())
+//                .into(holder.image)
     }
 
     override fun getItemCount(): Int {
