@@ -14,8 +14,8 @@ class Config {
 
     var swipeThreshold = 0.25f
 
-    var bottomCardScaleDiff = 0.15f
-    var topCardScaleDiff = 0.3f
+    var lowerCardScaleDiff = 0.15f
+    var upperCardScaleDiff = 0.5f
 
     var cardRadiusDP = 20f
 

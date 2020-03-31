@@ -398,7 +398,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         var view: CardContainer<*> = containers.last
 
         // Calculating bottom card container scale value base on percentY
-        var firstScale = 1f - config.bottomCardScaleDiff
+        var firstScale = 1f - config.lowerCardScaleDiff
         var secondScale = 1f
         var scale = firstScale + (secondScale - firstScale) * abs(percentY)
         view.scaleX = scale
@@ -417,7 +417,7 @@ class VerticalCardSwipe<T, VH : BaseViewHolder> : FrameLayout {
         view = containers.first
         // Calculating top card container scale value base on percentY
         firstScale = 1f
-        secondScale = 1f - config.topCardScaleDiff
+        secondScale = 1f - config.upperCardScaleDiff
         scale = firstScale + (secondScale - firstScale) * abs(percentY)
         view.scaleX = scale
         view.scaleY = scale
