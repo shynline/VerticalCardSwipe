@@ -8,12 +8,17 @@ package com.shynline.verticalcardswipe
 class Config {
     var bottomDragLimit = 0.25f
     var bottomDragCallThreshold = 0.125f
+
     var topDragLimit = 0.25f
     var topDragCallThreshold = 0.125f
+
     var swipeThreshold = 0.25f
+
     var bottomCardScaleDiff = 0.15f
     var topCardScaleDiff = 0.3f
+
     var cardRadiusDP = 20f
+
     var topOverLayHardener = 1.5f
     var bottomOverlaySoftener = 0.75f
 
