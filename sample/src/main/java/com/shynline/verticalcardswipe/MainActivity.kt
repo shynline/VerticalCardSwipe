@@ -43,20 +43,20 @@ class MainActivity : AppCompatActivity() {
 
         verticalCardSwipe.verticalCardsActionListener = object : VerticalCardSwipe.VerticalCardsActionListener<ItemModelView> {
             override fun onReleasedToActionBottom(item: ItemModelView?, expired: Boolean) {
-                Toast.makeText(this@MainActivity, "release to action from bottom", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Release to action from bottom", Toast.LENGTH_SHORT).show()
             }
 
             override fun onReleasedToActionTop(item: ItemModelView?, expired: Boolean) {
-                Toast.makeText(this@MainActivity, "release to action from top", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Release to action from top", Toast.LENGTH_SHORT).show()
             }
         }
         verticalCardSwipe.verticalCardsSwipeListener = object : VerticalCardSwipe.VerticalCardsSwipeListener<ItemModelView> {
             override fun onSwipedBottom(item: ItemModelView?, expired: Boolean) {
-                Toast.makeText(this@MainActivity, "swipe bottom", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Swipe bottom", Toast.LENGTH_SHORT).show()
             }
 
             override fun onSwipedTop(item: ItemModelView?, expired: Boolean) {
-                Toast.makeText(this@MainActivity, "swipe top", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "Swipe top", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -71,25 +71,25 @@ class MainActivity : AppCompatActivity() {
 
             override fun swipingTopPaused(item: ItemModelView?, callback: FirstTimeActions) {
                 AlertDialog.Builder(this@MainActivity)
-                        .setPositiveButton("proceed") { dialog, which -> callback.proceed() }
-                        .setNegativeButton("cancel") { dialog, which -> callback.cancel() }
+                        .setPositiveButton("Proceed") { dialog, which -> callback.proceed() }
+                        .setNegativeButton("Cancel") { dialog, which -> callback.cancel() }
                         .setCancelable(false)
-                        .setTitle("swiping top " + item?.id)
+                        .setTitle("Swiping top " + item?.id)
                         .show()
             }
 
             override fun swipingBottomPaused(item: ItemModelView?, callback: FirstTimeActions) {
                 AlertDialog.Builder(this@MainActivity)
-                        .setPositiveButton("proceed") { dialog, which ->
+                        .setPositiveButton("Proceed") { dialog, which ->
                             callback.proceed()
                         }
-                        .setNegativeButton("cancel") { dialog, which ->
+                        .setNegativeButton("Cancel") { dialog, which ->
                             callback.cancel()
                         }
                         .setCancelable(false)
                         .setOnDismissListener {
                         }
-                        .setTitle("swipe to action top " + item?.id)
+                        .setTitle("Swipe to action top " + item?.id)
                         .show()
             }
         }

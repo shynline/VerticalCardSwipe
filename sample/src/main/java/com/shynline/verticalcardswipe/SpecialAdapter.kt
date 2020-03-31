@@ -38,7 +38,7 @@ class SpecialAdapter(private val context: Context) : VerticalCardAdapter<ItemMod
             holder.adapter = RVAdapter(5, item.text)
             holder.recyclerView.adapter = holder.adapter
             holder.ad.visibility = View.GONE
-            holder.text.text = "${item.text}"
+            holder.text.text = "${item.id}"
         } else {
             holder.recyclerView.visibility = View.GONE
             holder.ad.visibility = View.VISIBLE
