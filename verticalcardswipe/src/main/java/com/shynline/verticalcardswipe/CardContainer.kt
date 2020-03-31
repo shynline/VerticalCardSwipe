@@ -205,7 +205,7 @@ internal class CardContainer<T> : CardView {
             frameOverlayTop.alpha = 0f
         } else if (py < 0) {
             frameOverlayBottom.alpha = 0f
-            frameOverlayTop.alpha = -py * config.topOverLayHardener
+            frameOverlayTop.alpha = -py * (1 / config.topOverLaySoftener)
         }
 
     }
