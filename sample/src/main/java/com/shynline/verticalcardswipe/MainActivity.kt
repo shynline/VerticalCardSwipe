@@ -79,14 +79,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun swipingBottomPaused(item: ItemModelView?, callback: FirstTimeActions) {
-                var intercept = true
                 AlertDialog.Builder(this@MainActivity)
                         .setPositiveButton("proceed") { dialog, which ->
-                            intercept = false
                             callback.proceed()
                         }
                         .setNegativeButton("cancel") { dialog, which ->
-                            intercept = false
                             callback.cancel()
                         }
                         .setCancelable(false)
