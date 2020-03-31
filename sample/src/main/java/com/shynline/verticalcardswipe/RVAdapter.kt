@@ -4,7 +4,6 @@ import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import androidx.recyclerview.widget.RecyclerView
 import java.util.*
 
@@ -28,7 +27,6 @@ class RVAdapter(private val count: Int, var text: String?) : RecyclerView.Adapte
 
 
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-
         var root: ViewGroup
 
         init {

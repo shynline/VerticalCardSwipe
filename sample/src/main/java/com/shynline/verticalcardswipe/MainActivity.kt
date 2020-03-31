@@ -1,10 +1,12 @@
 package com.shynline.verticalcardswipe
 
 
+import android.graphics.Color
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuInflater
 import android.view.MenuItem
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,9 +25,20 @@ class MainActivity : AppCompatActivity() {
         verticalCardSwipe = findViewById(R.id.oracle)
         val specialAdapter = SpecialAdapter(this)
 
-        verticalCardSwipe.initialize(specialAdapter, R.layout.otop, {
+        verticalCardSwipe.initialize(
+                adapter = specialAdapter,
+                topLayout = R.layout.otop,
+                topLayoutInitializer = {
+                    it.findViewById<TextView>(R.id.text).setTextColor(Color.CYAN)
+                },
+                bottomLayout = R.layout.obottom,
+                bottomLayoutInitializer = {
 
-        }, R.layout.obottom, {}, R.layout.expire, {})
+                },
+                expireLayout = R.layout.expire,
+                expireLayoutInitializer = {
+
+                })
 
 
         verticalCardSwipe.verticalCardsActionListener = object : VerticalCardSwipe.VerticalCardsActionListener<ItemModelView> {
