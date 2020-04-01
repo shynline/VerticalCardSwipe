@@ -211,9 +211,9 @@ internal class CardContainer<T> : CardView {
         } else if (py < 0) {
             frameOverlayBottom.alpha = 0f
             frameOverlayTop.alpha = if (itemConfig.actionTop){
-                -py * (1 / config.topDragLimit *  config.topOverLaySoftener)
+                -py * (1 / config.topDragLimit *  config.topOverlaySoftener)
             }else{
-                -py * (1 / config.topOverLaySoftener)
+                -py * (1 / config.topOverlaySoftener)
             }
         }
 

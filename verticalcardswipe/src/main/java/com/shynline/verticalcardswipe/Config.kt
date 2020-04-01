@@ -19,7 +19,7 @@ class Config {
 
     var cardRadiusDP = 20f
 
-    var topOverLaySoftener = 0.5f
+    var topOverlaySoftener = 0.5f
     var bottomOverlaySoftener = 0.5f
 
     var cardTopMarginDP = 10f
