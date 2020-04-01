@@ -25,6 +25,7 @@ class MainActivity : AppCompatActivity() {
         verticalCardSwipe = findViewById(R.id.oracle)
         val specialAdapter = SpecialAdapter(this)
 
+
         verticalCardSwipe.initialize(
                 adapter = specialAdapter,
                 topLayout = R.layout.otop,
@@ -203,7 +204,7 @@ class MainActivity : AppCompatActivity() {
                 bottomActionFlag = bottomActionFlag.not()
                 verticalCardSwipe.enableBottomAction(bottomActionFlag)
                 Toast.makeText(this,
-                        if (firstTimeFlag) "Bottom action activated" else "Bottom action deactivated",
+                        if (bottomActionFlag) "Bottom action activated" else "Bottom action deactivated",
                         Toast.LENGTH_SHORT).show()
             }
             R.id.toggle_ad_prevent_top -> {
