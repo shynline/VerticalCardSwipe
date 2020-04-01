@@ -52,6 +52,11 @@ internal class CardContainer<T> : CardView {
         set(value) {
             field = value
             if (value) {
+                // Ads are not going to expire
+                // No expire overlay and no swipe prevention
+                if ((item as Ads).isCurrentItemAd()){
+                    return
+                }
                 // Hide the top and bottom overlay
                 // TODO: Animate hiding overlays
                 frameOverlayBottom.alpha = 0f
