@@ -13,6 +13,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.cardview.widget.CardView
 import kotlin.math.abs
+import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
@@ -256,7 +257,7 @@ internal class CardContainer<T> : CardView {
 
     private fun handleSwipeToActionUp(swipeDirection: SwipeDirection) {
 
-        if (translationY < config.topDragCallThreshold * height) {
+        if (translationY.absoluteValue > config.topDragCallThreshold * height) {
             // Swipe threshold has been satisfied
             if (firstTimeEventListener?.isSwipingTopForFirstTime(item) == true) {
                 // It's first time we pause the view until user respond
@@ -293,7 +294,7 @@ internal class CardContainer<T> : CardView {
     }
 
     private fun handleSwipeToActionBottom(swipeDirection: SwipeDirection) {
-        if (translationY > config.bottomDragCallThreshold * height) {
+        if (translationY.absoluteValue > config.bottomDragCallThreshold * height) {
             // Swipe threshold has been satisfied
             if (firstTimeEventListener?.isSwipingBottomForFirstTime(item) == true) {
                 // It's first time we pause the view until user respond
