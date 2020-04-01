@@ -200,6 +200,9 @@ internal class CardContainer<T> : CardView {
         // If the item is expired e.g: being removed
         if (expired)
             return
+        if ((item as Ads).isCurrentItemAd()){
+            return
+        }
         // Handling Overlays
         if (py >= 0) {
             frameOverlayBottom.alpha = if (itemConfig.actionBottom) {
