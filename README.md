@@ -5,20 +5,8 @@
 [![API](https://img.shields.io/badge/API-21%2B-blue.svg?style=flat)](https://android-arsenal.com/api?level=21)
 [![Twitter](https://img.shields.io/badge/Twitter-%40shynline-red?style=flat)](http://twitter.com/shynline)
 
-```Groovy
-allprojects {
-    repositories {
-      jcenter()
-      maven { url "https://jitpack.io" }
-    }
- }
-```
-
-```Groovy
-dependencies {
-    implementation 'com.github.shynline:VerticalCardSwipe:0.0.5'
-}
-```
+## Usage
+Installation and Documents are available at [WIKI](https://github.com/shynline/VerticalCardSwipe/wiki/0-Home)
 
 ## License
 ```License
