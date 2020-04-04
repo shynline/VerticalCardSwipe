@@ -17,7 +17,9 @@ import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 
-internal class CardContainer<T> : CardView {
+internal class CardContainer<T> @JvmOverloads constructor(
+        context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
+) : CardView(context, attrs, defStyleAttr) {
 
     // Public fields set by parent
     // first time event listener
@@ -95,20 +97,7 @@ internal class CardContainer<T> : CardView {
             return if (py.isNaN()) 0f else py
         }
 
-    constructor(context: Context) : super(context) {
-        init()
-    }
-
-    constructor(context: Context, attrs: AttributeSet?) : super(context, attrs) {
-        init()
-    }
-
-    constructor(context: Context, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
-        init()
-    }
-
-
-    private fun init() {
+    init {
         // Initializing the card
         viewConfiguration = ViewConfiguration.get(context)
         // Inflating base layout
