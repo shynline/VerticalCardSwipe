@@ -84,10 +84,10 @@ internal class CardContainer<T> @JvmOverloads constructor(
 
 
     // ViewGroups
-    lateinit var frameContent: FrameLayout
-    lateinit var frameOverlayTop: FrameLayout
-    lateinit var frameOverlayBottom: FrameLayout
-    lateinit var frameOverlayExpire: FrameLayout
+    var frameContent: FrameLayout
+    var frameOverlayTop: FrameLayout
+    var frameOverlayBottom: FrameLayout
+    var frameOverlayExpire: FrameLayout
 
 
     private val percentY: Float
