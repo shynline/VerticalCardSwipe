@@ -416,9 +416,6 @@ internal class CardContainer<T> : CardView {
     }
 
 
-    /***
-     * This method animates the card to its original position and calls the callback on finish
-     */
     private fun moveToOriginOnAction(callback: () -> Unit) {
         // Animating the card
         animate().scaleX(1f).scaleY(1f)
