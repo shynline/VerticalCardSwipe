@@ -8,6 +8,11 @@
 ## Usage
 Installation and Documents are available at [WIKI](https://github.com/shynline/VerticalCardSwipe/wiki/0-Home)
 
+## Preview
+Swipe top | Swipe bottom | Release to action top | Release to action bottom
+--- | --- | --- | ---
+<img src="assets/swipetop.gif" width="100%">|<img src="assets/swipebottom.gif" width="100%">|<img src="assets/rtat.gif" width="100%">|<img src="assets/rtab.gif" width="100%">
+
 ## License
 ```License
 MIT License
